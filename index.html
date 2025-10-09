@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="versionInfo">v1.1.9</div> <!-- バージョンを更新しました -->
+    <div id="versionInfo">v1.2.0</div> <!-- バージョンを更新しました -->
     
     <div class="container">
         <!-- カメラ映像を表示する場所 -->
@@ -32,6 +32,19 @@
             <div class="modal-content">
                 <p id="permissionMessage"></p>
                 <button id="closeModalButton">OK</button>
+            </div>
+        </div>
+
+        <!-- ▼ 追記：撮影後のプレビュー用モーダル -->
+        <div id="previewModal" class="modal hidden" aria-modal="true" role="dialog">
+            <div class="preview-wrap">
+                <button id="previewCloseX" class="preview-close" aria-label="閉じる">×</button>
+                <img id="previewImage" alt="撮影プレビュー" />
+                <div class="preview-actions">
+                <button id="previewSaveBtn" class="preview-btn primary">保存する</button>
+                <button id="previewShareBtn" class="preview-btn">共有する</button>
+                <button id="previewCloseBtn" class="preview-btn danger">閉じる</button>
+                </div>
             </div>
         </div>
 

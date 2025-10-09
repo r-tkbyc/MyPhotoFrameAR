@@ -214,3 +214,67 @@ body {
 /* 上フレームは上端固定、下フレームは下端固定 */
 #frameTop { top: 0; transform-origin: center top; }
 #frameBottom { bottom: 0; transform-origin: center bottom; }
+
+/* ▼ 追記：撮影プレビュー用モーダル */
+#previewModal.modal {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+#previewModal:not(.hidden) { display: flex; }
+
+.preview-wrap {
+  position: relative;
+  width: min(92vw, 640px);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  padding: 16px 16px 20px;
+}
+
+.preview-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  color: #666;
+  cursor: pointer;
+}
+
+#previewImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  background: #e5e7eb; /* うっすらグレー（読み込み時の土台） */
+  border-radius: 8px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 14px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.preview-btn {
+  min-width: 120px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: #ff5b82;
+  color: #fff;
+  font-size: 14px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.preview-btn.primary { background: #28a745; } /* 保存：緑 */
+.preview-btn.danger  { background: #a1a1aa; } /* 閉じる：グレー */
