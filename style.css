@@ -222,13 +222,12 @@ body {
   align-items: center;
   padding: 16px;
 }
-/* セーフエリア対応の左右パディングで視覚的ど真ん中に */
-#previewModal.modal {
-  padding:
-    16px
-    calc(16px + env(safe-area-inset-right, 0px))
-    16px
-    calc(16px + env(safe-area-inset-left, 0px));
+/* 子ボックスを座標中央に固定（パディングの影響を受けない） */
+.preview-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
 }
 #previewModal:not(.hidden) { display: flex; }
 
