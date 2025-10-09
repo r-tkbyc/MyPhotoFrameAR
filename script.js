@@ -43,10 +43,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // カメラが起動したらカメラビューに切り替える
             setCameraView(true);
+            
+            // --- ここから追加・修正 ---
+            // カメラ起動に成功した場合のみメッセージを設定
+            permissionMessage.textContent = 'カメラの使用が許可されました。'; 
+            // --- ここまで追加・修正 ---
 
         } catch (err) {
             console.error('カメラへのアクセスに失敗しました:', err);
-            // ... (エラーメッセージの設定は既存のまま) ...
+            if (err.name === 'NotAllowedError') {
+                permissionMessage.textContent = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
+            } else if (err.name === 'NotFoundError') {
+                permissionMessage.textContent = 'カメラが見つかりませんでした。';
+            } else {
+                permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
+            }
+            // エラーが発生した場合もモーダルを表示
             permissionModal.style.display = 'flex';
             document.body.classList.add('modal-open');
         }
@@ -55,11 +67,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 初期起動時のカメラ設定とモーダル表示
     await startCamera(); // カメラを起動
     
-    // 許可ダイアログは初回起動時にのみ表示されるべきなので、メッセージが設定されていれば表示
-    if (permissionMessage.textContent) {
+    // --- ここから修正 ---
+    // 許可ダイアログは初回起動時にのみ表示されるべきなので、メッセージが設定されている、
+    // またはカメラが正常に起動している場合にモーダルを表示する。
+    // permissionMessage.textContent が設定されていれば、成功・失敗問わず何らかのメッセージが準備されている。
+    // cameraFeed.srcObject が設定されていれば、カメラが起動成功している。
+    if (permissionMessage.textContent || cameraFeed.srcObject) { 
         permissionModal.style.display = 'flex';
         document.body.classList.add('modal-open');
     }
+    // --- ここまで修正 ---
 
     closeModalButton.addEventListener('click', () => {
         permissionModal.style.display = 'none';
