@@ -7,8 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     let stream = null; // カメラのストリームを保持する変数
 
     try {
-        // カメラとマイクへのアクセスを要求
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        // 背面カメラを優先し、見つからなければ他のカメラも許容する（フォールバックの可能性あり）
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: 'environment' // 'environment' を直接指定
+            },
+            audio: false
+        });
 
         // 成功した場合
         cameraFeed.srcObject = stream;
