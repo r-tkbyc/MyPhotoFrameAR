@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const drawFrame = (imgEl, place) => {
         if (!imgEl || !imgEl.complete || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
 
-        const SCALE = 0.7;
+        const SCALE = 0.65;
         const cw = photoCanvas.width;
         const ch = photoCanvas.height;
         const iw = imgEl.naturalWidth;
