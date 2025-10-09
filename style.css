@@ -198,3 +198,17 @@ body {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* 追記：フレーム画像のベース */
+#frameTop, #frameBottom {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  object-fit: fill;       /* 横方向の伸縮のみを許容（縦はJSで固定） */
+  z-index: 6;             /* video(1) / photoCanvas(2) より前、ボタン(10)より後でもOKなら調整可 */
+  pointer-events: none;   /* タップ操作の邪魔をしない */
+}
+
+/* 上フレームは上端固定、下フレームは下端固定 */
+#frameTop    { top: 0; }
+#frameBottom { bottom: 0; }

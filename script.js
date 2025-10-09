@@ -11,6 +11,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     let stream = null;
     let canvasContext = photoCanvas.getContext('2d');
 
+    // ★ 追加：フレームDOM参照と高さ固定ユーティリティ
+    const frameTopEl    = document.getElementById('frameTop');
+    const frameBottomEl = document.getElementById('frameBottom');
+
+    function lockFrameHeightsOnce(imgEl) {
+        if (!imgEl) return;
+        const apply = () => {
+            if (imgEl.naturalHeight) {
+                // 縦は画像の元の高さそのまま（横はCSSで100%）
+                imgEl.style.height = imgEl.naturalHeight + 'px';
+            }
+        };
+        if (imgEl.complete) apply();
+        else imgEl.addEventListener('load', apply, { once: true });
+    }
+
+    // ★ 追加：ロード時に高さを固定
+    lockFrameHeightsOnce(frameTopEl);
+    lockFrameHeightsOnce(frameBottomEl);
+
     // cameraFeedとphotoCanvasの表示を制御する関数
     const setCameraView = (isCameraActive) => {
         if (isCameraActive) {
@@ -151,6 +171,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         sx, sy, sWidth, sHeight,   // ソース（切り出し範囲）
         0, 0, photoCanvas.width, photoCanvas.height // 出力（見えているサイズ）
       );
+
+      // ★ 追加：フレームをキャンバスに合成（見た目どおり）
+      const drawFrame = (imgEl, place) => {
+        if (!imgEl || !imgEl.complete || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
+        const targetW = photoCanvas.width;           // 横は端末幅いっぱい
+        const targetH = imgEl.naturalHeight;         // 縦は元画像の高さそのまま
+        const dx = 0;
+        const dy = (place === 'top') ? 0 : (photoCanvas.height - targetH);
+        canvasContext.drawImage(
+          imgEl,
+          0, 0, imgEl.naturalWidth, imgEl.naturalHeight,
+          dx, dy, targetW, targetH
+        );
+      };
+      drawFrame(frameTopEl, 'top');
+      drawFrame(frameBottomEl, 'bottom');
 
       // 3) 描画が終わってからストリーム停止＆ビュー切り替え
       stream.getTracks().forEach(track => track.stop());
