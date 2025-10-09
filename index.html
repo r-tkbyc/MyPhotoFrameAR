@@ -7,20 +7,23 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="versionInfo">v1.0.8</div> <!-- バージョンを更新しました -->
+    <div id="versionInfo">v1.0.9</div> <!-- バージョンを更新しました -->
     
     <div class="container">
         <!-- カメラ映像を表示する場所 -->
         <video id="cameraFeed" autoplay playsinline></video>
 
         <!-- 撮影した画像を表示するキャンバス (最初は非表示) -->
-        <canvas id="photoCanvas"></canvas>
+        <canvas id="photoCanvas" class="hidden"></canvas>
 
         <!-- シャッターボタン -->
         <button id="shutterButton" class="control-button">
             <span class="icon-circle"></span>
         </button>
         
+        <!-- 保存ボタン (撮影後に表示) -->
+        <button id="saveButton" class="control-button hidden">保存</button> <!-- 追加 -->
+
         <!-- 再撮影ボタン (撮影後に表示) -->
         <button id="retakeButton" class="control-button hidden">再撮影</button>
 

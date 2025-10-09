@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cameraFeed = document.getElementById('cameraFeed');
     const photoCanvas = document.getElementById('photoCanvas');
     const shutterButton = document.getElementById('shutterButton');
+    const saveButton = document.getElementById('saveButton'); // 追加
     const retakeButton = document.getElementById('retakeButton');
     const permissionModal = document.getElementById('permissionModal');
     const permissionMessage = document.getElementById('permissionMessage');
@@ -16,11 +17,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             cameraFeed.classList.remove('hidden');
             photoCanvas.classList.add('hidden');
             shutterButton.classList.remove('hidden');
+            saveButton.classList.add('hidden');    // 保存ボタンを非表示
             retakeButton.classList.add('hidden');
         } else {
             cameraFeed.classList.add('hidden');
             photoCanvas.classList.remove('hidden');
             shutterButton.classList.add('hidden');
+            saveButton.classList.remove('hidden'); // 保存ボタンを表示
             retakeButton.classList.remove('hidden');
         }
     };
@@ -41,13 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             cameraFeed.srcObject = stream;
             cameraFeed.play();
 
-            // カメラが起動したらカメラビューに切り替える
             setCameraView(true);
             
-            // --- ここから追加・修正 ---
-            // カメラ起動に成功した場合のみメッセージを設定
             permissionMessage.textContent = 'カメラの使用が許可されました。'; 
-            // --- ここまで追加・修正 ---
 
         } catch (err) {
             console.error('カメラへのアクセスに失敗しました:', err);
@@ -58,25 +57,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
             }
-            // エラーが発生した場合もモーダルを表示
             permissionModal.style.display = 'flex';
             document.body.classList.add('modal-open');
         }
     };
 
-    // 初期起動時のカメラ設定とモーダル表示
-    await startCamera(); // カメラを起動
+    await startCamera(); 
     
-    // --- ここから修正 ---
-    // 許可ダイアログは初回起動時にのみ表示されるべきなので、メッセージが設定されている、
-    // またはカメラが正常に起動している場合にモーダルを表示する。
-    // permissionMessage.textContent が設定されていれば、成功・失敗問わず何らかのメッセージが準備されている。
-    // cameraFeed.srcObject が設定されていれば、カメラが起動成功している。
     if (permissionMessage.textContent || cameraFeed.srcObject) { 
         permissionModal.style.display = 'flex';
         document.body.classList.add('modal-open');
     }
-    // --- ここまで修正 ---
 
     closeModalButton.addEventListener('click', () => {
         permissionModal.style.display = 'none';
@@ -89,19 +80,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Canvasのサイズをvideo要素に合わせる
         photoCanvas.width = cameraFeed.videoWidth;
         photoCanvas.height = cameraFeed.videoHeight;
 
-        // videoの内容をCanvasに描画
         canvasContext.drawImage(cameraFeed, 0, 0, photoCanvas.width, photoCanvas.height);
 
-        // カメラ映像を停止
         stream.getTracks().forEach(track => track.stop());
         cameraFeed.srcObject = null;
 
-        // 撮影画像ビューに切り替える
-        setCameraView(false);
+        setCameraView(false); // 撮影画像ビューに切り替える (保存ボタンも表示される)
+    });
+
+    // 保存ボタンのイベントリスナー (追加)
+    saveButton.addEventListener('click', () => {
+        // canvasの内容を画像データURLとして取得
+        const imageDataURL = photoCanvas.toDataURL('image/png'); // PNG形式で取得
+
+        // ダウンロード用のリンク要素を作成
+        const a = document.createElement('a');
+        a.href = imageDataURL;
+        a.download = 'photo_' + new Date().getTime() + '.png'; // ファイル名を生成
+        document.body.appendChild(a); // DOMに追加 (一時的)
+        a.click(); // クリックしてダウンロードをトリガー
+        document.body.removeChild(a); // リンク要素を削除
     });
 
     retakeButton.addEventListener('click', () => {
