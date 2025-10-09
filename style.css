@@ -204,8 +204,8 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%); /* 中央寄せ */
-  z-index: 6;             /* video(1) / photoCanvas(2) より前、ボタン(10)より後でもOKなら調整可 */
-  pointer-events: none;   /* タップ操作の邪魔をしない */
+  z-index: 6;
+  pointer-events: none;
 }
 
 /* 上フレームは上端固定、下フレームは下端固定 */
