@@ -216,9 +216,19 @@ body {
 #frameBottom { bottom: 0; transform-origin: center bottom; }
 
 /* ▼ 追記：撮影プレビュー用モーダル */
-#previewModal.modal{
-  padding: 16px calc(16px + env(safe-area-inset-right, 0px))
-           16px calc(16px + env(safe-area-inset-left , 0px));
+#previewModal.modal {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+/* セーフエリア対応の左右パディングで視覚的ど真ん中に */
+#previewModal.modal {
+  padding:
+    16px
+    calc(16px + env(safe-area-inset-right, 0px))
+    16px
+    calc(16px + env(safe-area-inset-left, 0px));
 }
 #previewModal:not(.hidden) { display: flex; }
 
