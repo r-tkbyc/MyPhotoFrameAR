@@ -1,60 +1,42 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Camera + Frame & Stickers</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- fabric.js（v5 以降推奨）-->
-  <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>カメラアプリ</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <!-- カメラ映像 -->
-    <video id="cameraFeed" playsinline autoplay muted></video>
+    <div id="versionInfo">v1.0.9</div> <!-- バージョンを更新しました -->
+    
+    <div class="container">
+        <!-- カメラ映像を表示する場所 -->
+        <video id="cameraFeed" autoplay playsinline></video>
 
-    <!-- オーバーレイ（fabric.js用） -->
-    <canvas id="overlayCanvas"></canvas>
+        <!-- 撮影した画像を表示するキャンバス (最初は非表示) -->
+        <canvas id="photoCanvas" class="hidden"></canvas>
 
-    <!-- 撮影後の表示 -->
-    <canvas id="photoCanvas" class="hidden"></canvas>
+        <!-- シャッターボタン -->
+        <button id="shutterButton" class="control-button">
+            <span class="icon-circle"></span>
+        </button>
+        
+        <!-- 保存ボタン (撮影後に表示) -->
+        <button id="saveButton" class="control-button hidden">保存</button> <!-- 追加 -->
 
-    <!-- コントロール群 -->
-    <div class="controls">
-      <div class="row">
-        <button id="shutterButton" class="primary">撮影</button>
-        <button id="saveButton" class="hidden">保存</button>
-        <button id="retakeButton" class="hidden">再撮影</button>
-      </div>
-      <div class="row compact">
-        <label class="field">
-          フレーム:
-          <select id="frameSelect">
-            <option value="">なし</option>
-            <!-- 透明PNG推奨（/assets/frames/ に配置） -->
-            <option value="assets/frames/frame1.png">Frame 1</option>
-            <option value="assets/frames/frame2.png">Frame 2</option>
-          </select>
-        </label>
-        <button class="ghost" data-stamp="assets/stamps/heart.png">♥︎ スタンプ</button>
-        <button class="ghost" data-stamp="assets/stamps/star.png">★ スタンプ</button>
-        <label class="ghost file">
-          画像をスタンプ追加
-          <input type="file" id="stampFile" accept="image/*" />
-        </label>
-        <button id="clearOverlays" class="ghost">重ね物クリア</button>
-      </div>
+        <!-- 再撮影ボタン (撮影後に表示) -->
+        <button id="retakeButton" class="control-button hidden">再撮影</button>
+
+        <!-- カメラ許可メッセージ用のモーダル -->
+        <div id="permissionModal" class="modal">
+            <div class="modal-content">
+                <p id="permissionMessage"></p>
+                <button id="closeModalButton">OK</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- 権限モーダル -->
-  <div id="permissionModal" class="modal">
-    <div class="modal-content">
-      <p id="permissionMessage">カメラへのアクセスを許可してください。</p>
-      <button id="retryButton">再試行</button>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
