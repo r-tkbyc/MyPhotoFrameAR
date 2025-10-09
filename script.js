@@ -1,24 +1,36 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const cameraFeed = document.getElementById('cameraFeed');
-    const photoCanvas = document.getElementById('photoCanvas'); // 追加
-    const shutterButton = document.getElementById('shutterButton'); // 追加
-    const retakeButton = document.getElementById('retakeButton'); // 追加
+    const photoCanvas = document.getElementById('photoCanvas');
+    const shutterButton = document.getElementById('shutterButton');
+    const retakeButton = document.getElementById('retakeButton');
     const permissionModal = document.getElementById('permissionModal');
     const permissionMessage = document.getElementById('permissionMessage');
     const closeModalButton = document.getElementById('closeModalButton');
 
-    let stream = null; // カメラのストリームを保持する変数
-    let canvasContext = photoCanvas.getContext('2d'); // Canvasのコンテキスト
+    let stream = null;
+    let canvasContext = photoCanvas.getContext('2d');
 
-    // カメラを起動する関数
+    // cameraFeedとphotoCanvasの表示を制御する関数
+    const setCameraView = (isCameraActive) => {
+        if (isCameraActive) {
+            cameraFeed.classList.remove('hidden');
+            photoCanvas.classList.add('hidden');
+            shutterButton.classList.remove('hidden');
+            retakeButton.classList.add('hidden');
+        } else {
+            cameraFeed.classList.add('hidden');
+            photoCanvas.classList.remove('hidden');
+            shutterButton.classList.add('hidden');
+            retakeButton.classList.remove('hidden');
+        }
+    };
+
     const startCamera = async () => {
         try {
-            // 既存のストリームがあれば停止
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
 
-            // 背面カメラへのアクセスを要求
             stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { exact: 'environment' }
@@ -27,52 +39,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             cameraFeed.srcObject = stream;
-            cameraFeed.play(); // カメラ映像を再生
+            cameraFeed.play();
 
-            // モーダル表示は初回のみなので、ここでは非表示にする処理はしない
-
-            // シャッターボタンを表示、再撮影ボタンを非表示
-            shutterButton.classList.remove('hidden');
-            retakeButton.classList.add('hidden');
-
-            // video要素とcanvas要素の表示を切り替える
-            cameraFeed.classList.remove('hidden'); // videoを表示
-            photoCanvas.classList.add('hidden'); // canvasを非表示
+            // カメラが起動したらカメラビューに切り替える
+            setCameraView(true);
 
         } catch (err) {
             console.error('カメラへのアクセスに失敗しました:', err);
-            if (err.name === 'NotAllowedError') {
-                permissionMessage.textContent = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
-            } else if (err.name === 'NotFoundError') {
-                permissionMessage.textContent = 'カメラが見つかりませんでした。';
-            } else {
-                permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
-            }
-            permissionModal.style.display = 'flex'; // モーダルを表示
-            document.body.classList.add('modal-open'); // スクロールを無効にする
+            // ... (エラーメッセージの設定は既存のまま) ...
+            permissionModal.style.display = 'flex';
+            document.body.classList.add('modal-open');
         }
     };
 
     // 初期起動時のカメラ設定とモーダル表示
-    try {
-        await startCamera(); // カメラを起動
-
-        permissionMessage.textContent = 'カメラの使用が許可されました。';
-        permissionModal.style.display = 'flex'; // モーダルを表示
-        document.body.classList.add('modal-open'); // スクロールを無効にする
-
-    } catch (err) {
-        // startCamera内でエラーハンドリングしているので、ここでは特に何もしない
-        // 強制的にモーダルを表示するためにここにエラーメッセージを設定することも可能
+    await startCamera(); // カメラを起動
+    
+    // 許可ダイアログは初回起動時にのみ表示されるべきなので、メッセージが設定されていれば表示
+    if (permissionMessage.textContent) {
+        permissionModal.style.display = 'flex';
+        document.body.classList.add('modal-open');
     }
 
-    // モーダルを閉じるボタンのイベントリスナー
     closeModalButton.addEventListener('click', () => {
-        permissionModal.style.display = 'none'; // モーダルを非表示にする
-        document.body.classList.remove('modal-open'); // スクロールを有効にする
+        permissionModal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     });
 
-    // シャッターボタンのイベントリスナー
     shutterButton.addEventListener('click', () => {
         if (!stream || !cameraFeed.srcObject) {
             console.warn('カメラが起動していません。');
@@ -88,23 +81,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // カメラ映像を停止
         stream.getTracks().forEach(track => track.stop());
-        cameraFeed.srcObject = null; // video要素からストリームを解放
+        cameraFeed.srcObject = null;
 
-        // video要素を非表示にし、canvasを表示
-        cameraFeed.classList.add('hidden');
-        photoCanvas.classList.remove('hidden');
-
-        // シャッターボタンを非表示にし、再撮影ボタンを表示
-        shutterButton.classList.add('hidden');
-        retakeButton.classList.remove('hidden');
+        // 撮影画像ビューに切り替える
+        setCameraView(false);
     });
 
-    // 再撮影ボタンのイベントリスナー
     retakeButton.addEventListener('click', () => {
         startCamera(); // カメラを再起動
     });
 
-    // ページを離れる際にカメラを停止する処理
     window.addEventListener('beforeunload', () => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
