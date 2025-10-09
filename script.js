@@ -95,42 +95,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     shutterButton.addEventListener('click', () => {
-        if (!stream || !cameraFeed.srcObject) {
-            console.warn('カメラが起動していません。');
-            return;
-        }
+      if (!stream || !cameraFeed.srcObject) {
+        console.warn('カメラが起動していません。');
+        return;
+      }
 
-        // キャンバスを「見えているサイズ（CSS）」に合わせる
-        const cw = photoCanvas.clientWidth;
-        const ch = photoCanvas.clientHeight;
+      // 1) 「見えているサイズ」は非表示の canvas ではなく、可視の video から取る
+      const cw = cameraFeed.clientWidth;
+      const ch = cameraFeed.clientHeight;
+
+      // 念のためのフォールバック（極端なケースで 0 を避ける）
+      if (!cw || !ch) {
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        photoCanvas.width  = Math.max(1, Math.round(containerRect.width));
+        photoCanvas.height = Math.max(1, Math.round(containerRect.height));
+      } else {
         photoCanvas.width  = cw;
         photoCanvas.height = ch;
+      }
 
-        // CSSの object-fit: cover と同じ見え方でクロップ描画
-        const vw = cameraFeed.videoWidth;
-        const vh = cameraFeed.videoHeight;
-        const videoRatio  = vw / vh;
-        const canvasRatio = cw / ch;
-        let sx, sy, sWidth, sHeight;
-        if (videoRatio > canvasRatio) {
-          // 動画の方が横に広い → 左右をカット
-          sHeight = vh;
-          sWidth  = vh * canvasRatio;
-          sx = (vw - sWidth) / 2;
-          sy = 0;
-        } else {
-          // 動画の方が縦に長い → 上下をカット
-          sWidth  = vw;
-          sHeight = vw / canvasRatio;
-          sx = 0;
-          sy = (vh - sHeight) / 2;
-        }
-        canvasContext.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, cw, ch);
+      // 2) CSSの object-fit: cover と同じ見え方でクロップして描画
+      const vw = cameraFeed.videoWidth;
+      const vh = cameraFeed.videoHeight;
 
-        stream.getTracks().forEach(track => track.stop());
-        cameraFeed.srcObject = null;
+      // readyState が足りないと iOS/Safari で黒くなることがあるので保険
+      if (!vw || !vh || cameraFeed.readyState < 2) {
+        // 何も描けない状態なら、少し待ってから再試行（最小ディレイ）
+        setTimeout(() => shutterButton.click(), 50);
+        return;
+      }
 
-        setCameraView(false); // 撮影画像ビューに切り替える (保存ボタンも表示される)
+      const videoRatio  = vw / vh;
+      const canvasRatio = photoCanvas.width / photoCanvas.height;
+      let sx, sy, sWidth, sHeight;
+
+      if (videoRatio > canvasRatio) {
+        // 動画の方が横に広い → 左右をカット
+        sHeight = vh;
+        sWidth  = Math.round(vh * canvasRatio);
+        sx = Math.round((vw - sWidth) / 2);
+        sy = 0;
+      } else {
+        // 動画の方が縦に長い → 上下をカット
+        sWidth  = vw;
+        sHeight = Math.round(vw / canvasRatio);
+        sx = 0;
+        sy = Math.round((vh - sHeight) / 2);
+      }
+
+      // 以前の transform が残って黒くなるのを避けるために一旦リセット
+      canvasContext.setTransform(1, 0, 0, 1, 0, 0);
+      canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+      canvasContext.drawImage(
+        cameraFeed,
+        sx, sy, sWidth, sHeight,   // ソース（切り出し範囲）
+        0, 0, photoCanvas.width, photoCanvas.height // 出力（見えているサイズ）
+      );
+
+      // 3) 描画が終わってからストリーム停止＆ビュー切り替え
+      stream.getTracks().forEach(track => track.stop());
+      cameraFeed.srcObject = null;
+
+      setCameraView(false); // 撮影画像ビューへ（保存ボタンが出る）
     });
 
     // 保存ボタンのイベントリスナー (追加)
