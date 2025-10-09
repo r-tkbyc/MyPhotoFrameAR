@@ -100,3 +100,89 @@ body {
 .modal-open {
     overflow: hidden;
 }
+
+/* .container の高さを調整 */
+.container {
+    /* 既存のスタイル */
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    /* height: 100vh; から変更 */
+    height: calc(100vh - 20px); /* バージョン表示やボタンのスペースを考慮して少し小さく */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* 撮影キャンバスのスタイル */
+#photoCanvas {
+    position: absolute; /* 親要素 .container に対して絶対配置 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none; /* 初期状態では非表示 */
+}
+
+/* 制御ボタンの共通スタイル */
+.control-button {
+    position: absolute;
+    bottom: 30px; /* 画面下部からの距離 */
+    background-color: rgba(255, 255, 255, 0.8); /* 半透明の白 */
+    border: none;
+    border-radius: 50%; /* 丸いボタンにする */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    z-index: 900; /* カメラ映像やキャンバスより手前 */
+}
+
+.control-button:active {
+    transform: scale(0.95); /* クリック時のアニメーション */
+}
+
+/* シャッターボタンの専用スタイル */
+#shutterButton {
+    width: 70px;
+    height: 70px;
+    left: 50%;
+    transform: translateX(-50%); /* 中央配置 */
+}
+
+.icon-circle {
+    display: block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid #ff0000; /* 内側の赤い円 */
+    border-radius: 50%;
+    background-color: white;
+}
+
+/* 再撮影ボタンの専用スタイル */
+#retakeButton {
+    width: 80px;
+    height: 40px;
+    border-radius: 20px; /* 角丸のボタン */
+    background-color: #007bff;
+    color: white;
+    font-size: 0.9em;
+    left: 50%;
+    transform: translateX(-50%); /* 中央配置 */
+    bottom: 30px; /* シャッターボタンと同じ高さ */
+}
+
+#retakeButton:hover {
+    background-color: #0056b3;
+}
+
+/* 隠すためのユーティリティクラス */
+.hidden {
+    display: none !important;
+}
