@@ -62,7 +62,7 @@ body {
 .control-button {
     position: absolute;
     /* 変更後: システムUIのセーフエリアと、さらに余白を追加 */
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* env()で安全な下部領域を考慮 */
+    bottom: calc(5vh + env(safe-area-inset-bottom, 0px)); /* env()で安全な下部領域を考慮 */
     background-color: rgba(255, 255, 255, 0.8);
     border: none;
     border-radius: 50%;
@@ -106,8 +106,6 @@ body {
     font-size: 1em;
     left: 50%;
     transform: translateX(-50%);
-    /* 変更後: システムUIのセーフエリアと、さらに余白を追加 */
-    bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* env()で安全な下部領域を考慮 */
 }
 
 #retakeButton:hover {
