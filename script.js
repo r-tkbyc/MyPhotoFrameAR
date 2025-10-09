@@ -35,14 +35,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
                 video: {
-                    facingMode: { exact: 'environment' }
-                },
-                audio: false
+                    // 端末任せで最大に近い解像度を狙う
+                    facingMode: { ideal: 'environment' }, // exactは機種で失敗が出やすい
+                    width:  { ideal: 4096 },
+                    height: { ideal: 4096 }
+                }
             });
+
+            // capabilities を見て最大値にさらに寄せる
+            const track = stream.getVideoTracks()[0];
+            const caps = track.getCapabilities ? track.getCapabilities() : null;
+            if (caps && caps.width && caps.height) {
+              try {
+                await track.applyConstraints({
+                  width:  { ideal: caps.width.max },
+                  height: { ideal: caps.height.max }
+                });
+              } catch (e) {
+                console.warn('applyConstraints skipped:', e);
+              }
+            }
 
             cameraFeed.srcObject = stream;
             cameraFeed.play();
+
+            const settings = track.getSettings ? track.getSettings() : {};
+            console.log('Active camera resolution =', settings.width, 'x', settings.height);
 
             setCameraView(true);
             
