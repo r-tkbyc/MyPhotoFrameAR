@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カメラアプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- カメラ映像を表示する場所 -->
+        <video id="cameraFeed" autoplay playsinline></video>
+
+        <!-- カメラ許可メッセージ用のモーダル -->
+        <div id="permissionModal" class="modal">
+            <div class="modal-content">
+                <p id="permissionMessage"></p>
+                <button id="closeModalButton">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fabric.js ライブラリを読み込み -->
+    <!-- CDNから直接読み込むことで、別途ダウンロードやインストールなしに利用できます -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <!-- 自分のJavaScriptファイルを読み込み -->
+    <script src="script.js"></script>
+</body>
+</html>
