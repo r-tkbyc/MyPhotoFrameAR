@@ -16,15 +16,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const frameBottomEl = document.getElementById('frameBottom');
 
     function lockFrameHeightsOnce(imgEl) {
-        if (!imgEl) return;
-        const apply = () => {
-            if (imgEl.naturalHeight) {
-                // 縦は画像の元の高さそのまま（横はCSSで100%）
-                imgEl.style.height = imgEl.naturalHeight + 'px';
-            }
-        };
-        if (imgEl.complete) apply();
-        else imgEl.addEventListener('load', apply, { once: true });
+      if (!imgEl) return;
+      const apply = () => {
+        if (imgEl.naturalHeight) {
+          imgEl.style.height = imgEl.naturalHeight + 'px'; // 縦だけ固定
+          imgEl.style.width = 'auto';                       // 横は自然幅
+        }
+      };
+      if (imgEl.complete) apply();
+      else imgEl.addEventListener('load', apply, { once: true });
     }
 
     // ★ 追加：ロード時に高さを固定
@@ -175,16 +175,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       // ★ 追加：フレームをキャンバスに合成（見た目どおり）
       const drawFrame = (imgEl, place) => {
         if (!imgEl || !imgEl.complete || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
-        const targetW = photoCanvas.width;           // 横は端末幅いっぱい
-        const targetH = imgEl.naturalHeight;         // 縦は元画像の高さそのまま
-        const dx = 0;
-        const dy = (place === 'top') ? 0 : (photoCanvas.height - targetH);
+
+        const cw = photoCanvas.width;
+        const ch = photoCanvas.height;
+        const iw = imgEl.naturalWidth;
+        const ih = imgEl.naturalHeight;
+
+        // 横は中央寄せ（はみ出しOK）
+        const dx = Math.round((cw - iw) / 2);
+        const dy = (place === 'top') ? 0 : (ch - ih);
+
+        // 等倍で描画（拡縮なし）
         canvasContext.drawImage(
           imgEl,
-          0, 0, imgEl.naturalWidth, imgEl.naturalHeight,
-          dx, dy, targetW, targetH
+          0, 0, iw, ih,   // ソースそのまま
+          dx, dy, iw, ih  // 出力も等倍
         );
       };
+
       drawFrame(frameTopEl, 'top');
       drawFrame(frameBottomEl, 'bottom');
 

@@ -202,9 +202,9 @@ body {
 /* 追記：フレーム画像のベース */
 #frameTop, #frameBottom {
   position: absolute;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%); /* 中央寄せ */
   width: 100%;
-  object-fit: fill;       /* 横方向の伸縮のみを許容（縦はJSで固定） */
   z-index: 6;             /* video(1) / photoCanvas(2) より前、ボタン(10)より後でもOKなら調整可 */
   pointer-events: none;   /* タップ操作の邪魔をしない */
 }
