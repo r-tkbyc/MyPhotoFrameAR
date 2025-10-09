@@ -100,10 +100,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        photoCanvas.width = cameraFeed.videoWidth;
-        photoCanvas.height = cameraFeed.videoHeight;
+        // キャンバスを「見えているサイズ（CSS）」に合わせる
+        const cw = photoCanvas.clientWidth;
+        const ch = photoCanvas.clientHeight;
+        photoCanvas.width  = cw;
+        photoCanvas.height = ch;
 
-        canvasContext.drawImage(cameraFeed, 0, 0, photoCanvas.width, photoCanvas.height);
+        // CSSの object-fit: cover と同じ見え方でクロップ描画
+        const vw = cameraFeed.videoWidth;
+        const vh = cameraFeed.videoHeight;
+        const videoRatio  = vw / vh;
+        const canvasRatio = cw / ch;
+        let sx, sy, sWidth, sHeight;
+        if (videoRatio > canvasRatio) {
+          // 動画の方が横に広い → 左右をカット
+          sHeight = vh;
+          sWidth  = vh * canvasRatio;
+          sx = (vw - sWidth) / 2;
+          sy = 0;
+        } else {
+          // 動画の方が縦に長い → 上下をカット
+          sWidth  = vw;
+          sHeight = vw / canvasRatio;
+          sx = 0;
+          sy = (vh - sHeight) / 2;
+        }
+        canvasContext.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, cw, ch);
 
         stream.getTracks().forEach(track => track.stop());
         cameraFeed.srcObject = null;
