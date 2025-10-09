@@ -172,24 +172,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         0, 0, photoCanvas.width, photoCanvas.height // 出力（見えているサイズ）
       );
 
-      // ★ 追加：フレームをキャンバスに合成（見た目どおり）
+      // フレームをキャンバスに合成（見た目どおり）
       const drawFrame = (imgEl, place) => {
         if (!imgEl || !imgEl.complete || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
 
+        const SCALE = 0.8; // ← ここで倍率をひとまとめに
         const cw = photoCanvas.width;
         const ch = photoCanvas.height;
         const iw = imgEl.naturalWidth;
         const ih = imgEl.naturalHeight;
 
-        // 横は中央寄せ（はみ出しOK）
-        const dx = Math.round((cw - iw) / 2);
-        const dy = (place === 'top') ? 0 : (ch - ih);
+        const drawW = Math.round(iw * SCALE);
+        const drawH = Math.round(ih * SCALE);
 
-        // 等倍で描画（拡縮なし）
+        // 横は中央寄せ（はみ出しOK）
+        const dx = Math.round((cw - drawW) / 2);
+        // 上：上端揃え、下：下端揃え
+        const dy = (place === 'top') ? 0 : (ch - drawH);
+
+        // 0.8倍で描画
         canvasContext.drawImage(
           imgEl,
-          0, 0, iw, ih,   // ソースそのまま
-          dx, dy, iw, ih  // 出力も等倍
+          0, 0, iw, ih,             // ソースそのまま
+          dx, dy, drawW, drawH      // 出力は縮小後サイズ
         );
       };
 
