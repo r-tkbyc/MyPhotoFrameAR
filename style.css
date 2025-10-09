@@ -1,3 +1,16 @@
+#versionInfo {
+    position: fixed; /* 画面に固定 */
+    top: 10px;       /* 上から10px */
+    left: 10px;      /* 左から10px */
+    z-index: 1001;   /* 他の要素より手前に表示（モーダルより少し高め） */
+    background-color: rgba(0, 0, 0, 0.5); /* 半透明の黒背景 */
+    color: white;    /* 白い文字 */
+    padding: 3px 8px; /* 内側の余白 */
+    border-radius: 5px; /* 角を丸くする */
+    font-size: 0.7em; /* 小さめの文字サイズ */
+    pointer-events: none; /* マウスイベントを透過させ、下の要素をクリックできるようにする */
+}
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
