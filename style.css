@@ -119,6 +119,36 @@ body {
   pointer-events: none;            /* タップに干渉しない */
 }
 
+/* --- シャッターボタンを画像表示に切り替え（位置・サイズは現状維持） --- */
+#shutterButton {
+  width: 70px;                /* 既存のまま */
+  aspect-ratio: 1 / 1;        /* 正方形を保証（機種差での歪み防止） */
+  height: auto;
+  border-radius: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  line-height: 0;
+  padding: 0;                 /* 画像枠がズレないよう */
+  background: none;           /* 余計な背景を消す */
+  border: none;
+}
+
+/* 画像をボタンいっぱいにフィット（縦横比維持） */
+#shutterImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;        /* 画像の比率を保って内接 */
+  pointer-events: none;       /* タップはボタンに通す */
+}
+
+/* 旧実装の重なりを無効化（赤い円や疑似要素を消す） */
+#shutterButton .icon-circle { display: none !important; }
+#shutterButton::before { display: none !important; }
+
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
 
 /* ==================== バージョン情報 ==================== */
