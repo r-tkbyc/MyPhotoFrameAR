@@ -1,5 +1,5 @@
 /*
- * style.css (refactored, simple shutter image)
+ * style.css (refactored, shutter=image & stamps)
  * スマートフォン向けカメラアプリのスタイルシート
  */
 
@@ -12,25 +12,21 @@ body {
   align-items: center;
   min-height: 100vh;
   background-color: #f0f2f5;
-  overflow: hidden;              /* スクロールバー抑止 */
+  overflow: hidden;
 }
-
-/* モーダル表示時にbodyのスクロールを無効にする */
 .modal-open { overflow: hidden; }
-
-/* 要素の表示/非表示切替 */
 .hidden { display: none !important; }
 
 /* ==================== コンテナレイアウト ==================== */
 .container {
-  position: relative;            /* 子要素の絶対配置基準 */
+  position: relative;
   width: 100%;
-  max-width: 600px;              /* PCなどでの最大幅 */
+  max-width: 600px;
   height: 100vh;
   display: block;
   background-color: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  overflow: hidden;              /* はみ出しカット（スクロール防止） */
+  overflow: hidden;
 }
 
 /* ==================== カメラ映像とキャンバス ==================== */
@@ -41,14 +37,24 @@ body {
   width: 100%; height: 100%;
   object-fit: cover;
 }
-
 #cameraFeed { z-index: 1; }
 #photoCanvas {
   z-index: 2;
-  background-color: black;       /* デバッグ用の黒背景 */
+  background-color: black;
 }
 
-/* ==================== 制御ボタン（シャッター） ==================== */
+/* ===== スタンプ用キャンバス（カメラの上、フレームの下） ===== */
+#stampCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;              /* camera(1) < photo(2) < stamp(5) < frame(6) */
+  pointer-events: none;    /* 編集時のみ .interactive で有効化 */
+}
+#stampCanvas.interactive { pointer-events: auto; }
+
+/* ==================== 制御ボタン（シャッター／スタンプ） ==================== */
 .control-button {
   position: absolute;
   bottom: calc(15vh + env(safe-area-inset-bottom, 0px));
@@ -59,14 +65,14 @@ body {
   cursor: pointer;
   transition: transform 0.1s ease;
   z-index: 10;
-  background: transparent;       /* 半透明の丸は使わない */
-  box-shadow: none;              /* 影も使わない */
+  background: transparent;
+  box-shadow: none;
 }
 .control-button:active { transform: scale(0.95); }
 
-/* シャッターボタン（画像のみ・比率ベース） */
+/* シャッターボタン（画像のみ／比率ベース／真円維持） */
 #shutterButton {
-  width: clamp(16vmin, 20vmin, 24vmin);  /* ← 最小/理想/最大を“比率”だけで指定（px不使用） */
+  width: clamp(16vmin, 20vmin, 24vmin);
   aspect-ratio: 1 / 1;
   height: auto;
   border-radius: 50%;
@@ -78,20 +84,25 @@ body {
   line-height: 0;
   padding: 0;
   background: none;
+  border: none;
 }
-
 #shutterImage {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   object-fit: contain;
   pointer-events: none;
   background: transparent;
 }
 
-/* （旧実装）赤い円の子要素や疑似要素は完全無効化 */
-#shutterButton .icon-circle { display: none !important; }
-#shutterButton::before      { content: none !important; }
+/* スタンプボタン（シャッターの左） */
+#stampButton {
+  width: clamp(16vmin, 20vmin, 24vmin);
+  aspect-ratio: 1 / 1;
+  left: 50%;
+  transform: translateX(calc(-50% - 160%)); /* 中央から自分幅の1.6個ぶん左へ */
+  background: transparent;
+  box-shadow: none;
+}
 
 /* ==================== バージョン情報 ==================== */
 #versionInfo {
@@ -108,16 +119,14 @@ body {
 
 /* ==================== モーダル（共通） ==================== */
 .modal {
-  display: none;                 /* 初期は非表示 */
+  display: none;
   position: fixed;
-  inset: 0;                      /* 画面全体 */
+  inset: 0;
   z-index: 1000;
   background-color: rgba(0, 0, 0, 0.6);
-  justify-content: center;       /* 表示時は中央寄せ（各モーダルで display 制御） */
+  justify-content: center;
   align-items: center;
 }
-
-/* 汎用モーダル内容 */
 .modal-content {
   background-color: #fff;
   padding: 30px;
@@ -143,8 +152,6 @@ body {
   transition: background-color 0.2s ease;
 }
 .modal-content button:hover { background-color: #0056b3; }
-
-/* フェードイン */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-20px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -155,9 +162,9 @@ body {
 #frameBottom {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%) scale(0.65); /* 中央寄せ + 現状縮尺 */
-  transform-origin: center center;          /* 共通は center、上下の支点は個別で上書き */
-  width: auto; height: auto;                /* 等倍ベース（縦横比維持） */
+  transform: translateX(-50%) scale(0.65);
+  transform-origin: center center;     /* 共通center。上下支点は個別で上書き */
+  width: auto; height: auto;
   pointer-events: none;
   z-index: 6;
 }
@@ -170,21 +177,9 @@ body {
   transform-origin: center bottom;
 }
 
-/* 今後のスタンプ用ガイド（等比維持） */
-.stamp {
-  width: auto; height: auto;
-  transform-origin: center center;
-  /* 位置は translate/translate3d、拡縮は scale(s)（scaleX/scaleY を分けない） */
-}
-
 /* ==================== 撮影プレビューモーダル ==================== */
-/* 表示切替（hiddenクラスが外れたら表示） */
 #previewModal:not(.hidden) { display: flex; }
-
-/* previewModal 固有：親の padding は 0（ズレ防止） */
 #previewModal.modal { padding: 0; }
-
-/* 中身の枠を座標のど真ん中に固定 */
 .preview-wrap {
   position: fixed;
   top: 50%; left: 50%;
@@ -196,7 +191,6 @@ body {
   padding: 16px 16px 20px;
   margin: 0;
 }
-
 .preview-close {
   position: absolute;
   top: 8px; right: 10px;
@@ -207,7 +201,6 @@ body {
   color: #666;
   cursor: pointer;
 }
-
 #previewImage {
   display: block;
   width: 100%; height: auto;
@@ -216,7 +209,6 @@ body {
   background: #e5e7eb;
   border-radius: 8px;
 }
-
 .preview-actions {
   display: flex;
   gap: 16px;
@@ -225,7 +217,6 @@ body {
   margin-top: 14px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-
 .preview-btn {
   min-width: 120px;
   height: 40px;
@@ -237,5 +228,48 @@ body {
   padding: 0 16px;
   cursor: pointer;
 }
-.preview-btn.primary { background: #28a745; }  /* 保存：緑 */
-.preview-btn.danger  { background: #a1a1aa; }  /* 閉じる：グレー */
+.preview-btn.primary { background: #28a745; }
+.preview-btn.danger  { background: #a1a1aa; }
+
+/* ==================== ボトムシート（スタンプ選択） ==================== */
+#stampSheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  transform: translateY(100%);            /* 初期は非表示（下に隠す） */
+  transition: transform .25s ease-out;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom,0px));
+  z-index: 9;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+#stampSheet.open { transform: translateY(0); }
+
+#stampSheet .sheet-handle{
+  width: 40px; height: 4px; border-radius: 999px;
+  background: rgba(255,255,255,.7);
+  margin: 4px auto 8px;
+}
+#stampSheet .sheet-header{
+  display:flex; align-items:center; justify-content:space-between;
+  color:#fff; font-weight:600; margin: 0 4px 10px;
+}
+#stampSheet .sheet-close{
+  border:none; background: transparent; color:#fff; font-size: 24px; line-height:1; cursor:pointer;
+}
+
+/* サムネグリッド */
+.stamp-grid{
+  display:grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.stamp-thumb{
+  border:none; padding:8px; border-radius:10px;
+  background: rgba(255,255,255,.18);
+  cursor: pointer;
+}
+.stamp-thumb img{
+  display:block; width:100%; height:100%; object-fit:contain;
+}

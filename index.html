@@ -1,53 +1,77 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>WebARフォトフレーム</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>WebARフォトフレーム</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="versionInfo">v1.4.3</div> <!-- バージョンを更新しました -->
-    
-    <div class="container">
-        <!-- カメラ映像を表示する場所 -->
-        <video id="cameraFeed" autoplay playsinline></video>
+  <div id="versionInfo">v1.4.5</div>
 
-        <!-- 撮影した画像を表示するキャンバス (最初は非表示) -->
-        <canvas id="photoCanvas" class="hidden"></canvas>
+  <div class="container">
+    <!-- カメラ映像 -->
+    <video id="cameraFeed" autoplay playsinline></video>
 
-        <!-- シャッターボタン -->
-        <button id="shutterButton" class="control-button">
-            <img id="shutterImage" src="./Assets/shutter_button.png" alt="シャッター" />
-        </button>
+    <!-- 撮影結果キャンバス（最初は非表示） -->
+    <canvas id="photoCanvas" class="hidden"></canvas>
 
-        <!-- カメラ許可メッセージ用のモーダル -->
-        <div id="permissionModal" class="modal">
-            <div class="modal-content">
-                <p id="permissionMessage"></p>
-                <button id="closeModalButton">OK</button>
-            </div>
-        </div>
+    <!-- ▼ スタンプ用キャンバス（Fabric.js／カメラの上、フレームの下） -->
+    <canvas id="stampCanvas"></canvas>
 
-        <!-- ▼ 追記：撮影後のプレビュー用モーダル -->
-        <div id="previewModal" class="modal hidden" aria-modal="true" role="dialog">
-            <div class="preview-wrap">
-                <button id="previewCloseX" class="preview-close" aria-label="閉じる">×</button>
-                <img id="previewImage" alt="撮影プレビュー" />
-                <div class="preview-actions">
-                <button id="previewSaveBtn" class="preview-btn primary">保存する</button>
-                <button id="previewShareBtn" class="preview-btn">共有する</button>
-                <button id="previewCloseBtn" class="preview-btn danger">閉じる</button>
-                </div>
-            </div>
-        </div>
+    <!-- シャッターボタン（画像のみ） -->
+    <button id="shutterButton" class="control-button" aria-label="シャッター">
+      <img id="shutterImage" src="./Assets/shutter_button.png" alt="シャッター" />
+    </button>
 
-        <!-- 追記：フォトフレーム（見た目のオーバーレイ用） -->
-        <img id="frameTop" src="./Assets/frame_moon_top.png" alt="">
-        <img id="frameBottom" src="./Assets/frame_moon_bottm.png" alt="">
+    <!-- スタンプボタン（シャッターの左） -->
+    <button id="stampButton" class="control-button" aria-label="スタンプ">
+      <img src="./Assets/stamp_button.png" alt="" style="width:70%;height:70%;object-fit:contain;pointer-events:none;">
+    </button>
+
+    <!-- カメラ許可メッセージ用モーダル -->
+    <div id="permissionModal" class="modal">
+      <div class="modal-content">
+        <p id="permissionMessage"></p>
+        <button id="closeModalButton">OK</button>
+      </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-    <script src="script.js"></script>
+    <!-- 撮影後のプレビューモーダル -->
+    <div id="previewModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="preview-wrap">
+        <button id="previewCloseX" class="preview-close" aria-label="閉じる">×</button>
+        <img id="previewImage" alt="撮影プレビュー" />
+        <div class="preview-actions">
+          <button id="previewSaveBtn" class="preview-btn primary">保存する</button>
+          <button id="previewShareBtn" class="preview-btn">共有する</button>
+          <button id="previewCloseBtn" class="preview-btn danger">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- フォトフレーム（見た目のオーバーレイ用） -->
+    <img id="frameTop" src="./Assets/frame_moon_top.png" alt="">
+    <img id="frameBottom" src="./Assets/frame_moon_bottm.png" alt="">
+
+    <!-- ▼ 下から出る半透明のスタンプ選択シート -->
+    <div id="stampSheet" aria-hidden="true">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span>Stamp</span>
+        <button id="sheetCloseBtn" class="sheet-close" aria-label="閉じる">×</button>
+      </div>
+      <div class="stamp-grid">
+        <!-- サムネ（必要に応じて追加／差し替え） -->
+        <button class="stamp-thumb" data-src="./Assets/stamp_f.png"><img src="./Assets/stamp_f.png" alt=""></button>
+        <button class="stamp-thumb" data-src="./Assets/stamp_y.png"><img src="./Assets/stamp_y.png" alt=""></button>
+        <button class="stamp-thumb" data-src="./Assets/stamp_o.png"><img src="./Assets/stamp_o.png" alt=""></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fabric.js（すでに読み込み済みでなければ） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

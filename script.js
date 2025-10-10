@@ -15,20 +15,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const previewCloseBtn = document.getElementById('previewCloseBtn');
   const previewCloseX   = document.getElementById('previewCloseX');
 
-  // フレーム画像（DOM上に配置されている前提）
+  // フレーム
   const frameTopEl    = document.getElementById('frameTop');
   const frameBottomEl = document.getElementById('frameBottom');
-  // 表示と一致させる縮尺（CSSの scale と同値）
-  const FRAME_SCALE = 0.65;
+  const FRAME_SCALE = 0.65; // CSSと一致
+
+  // スタンプ（Fabric）
+  const stampCanvasEl = document.getElementById('stampCanvas');
+  const stampButton   = document.getElementById('stampButton');
+  const stampSheet    = document.getElementById('stampSheet');
+  const sheetCloseBtn = document.getElementById('sheetCloseBtn');
+
+  let fcanvas = null;   // Fabric.Canvas
+  let isSheetOpen = false;
 
   let stream = null;
   const canvasContext = photoCanvas.getContext('2d');
 
-  // 共有用の一時データ（モーダル表示中のプレビュー画像）
+  // プレビュー画像の一時データ
   let lastCaptureBlob = null;
   let lastCaptureObjectURL = null;
 
-  // カメラ表示/撮影結果の切り替え
+  // カメラ表示/撮影結果の切替
   const setCameraView = (isCameraActive) => {
     if (isCameraActive) {
       cameraFeed.classList.remove('hidden');
@@ -74,6 +82,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       setCameraView(true);
       permissionMessage.textContent = 'カメラの使用が許可されました。';
+
+      // 初回に Fabric 初期化
+      initFabricCanvas();
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
       if (err.name === 'NotAllowedError') {
@@ -94,13 +105,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     permissionModal.style.display = 'flex';
     document.body.classList.add('modal-open');
   }
-
   closeModalButton.addEventListener('click', () => {
     permissionModal.style.display = 'none';
     document.body.classList.remove('modal-open');
   });
 
-  // ---- フレーム画像のロード完了を保証する
+  // ---- フレーム画像のロード完了を保証
   function waitImage(el) {
     return new Promise((resolve) => {
       if (!el) return resolve(null);
@@ -110,11 +120,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   async function ensureFramesReady() {
-    const [top, bottom] = await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
-    return { top, bottom };
+    await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
   }
 
-  // ---- フレーム合成：表示と同じ（中央寄せ・上下端揃え・縮尺0.65）でキャンバスへ描画
+  // ---- フレーム合成（表示と一致）
   function drawFramesToCanvas() {
     const cw = photoCanvas.width;
     const ch = photoCanvas.height;
@@ -127,8 +136,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!iw || !ih) return;
       const drawW = Math.round(iw * FRAME_SCALE);
       const drawH = Math.round(ih * FRAME_SCALE);
-      const dx = Math.round((cw - drawW) / 2);         // 中央寄せ（はみ出しOK）
-      const dy = (place === 'top') ? 0 : (ch - drawH); // 上端／下端揃え
+      const dx = Math.round((cw - drawW) / 2);
+      const dy = (place === 'top') ? 0 : (ch - drawH);
       ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
 
@@ -136,7 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawOne(frameBottomEl, 'bottom');
   }
 
-  // ---- モーダル用：canvas から Blob/URL を作って差し込む
+  // ---- プレビューをモーダルに表示
   function openPreviewModalWithCanvas(canvas) {
     if (lastCaptureObjectURL) {
       URL.revokeObjectURL(lastCaptureObjectURL);
@@ -167,15 +176,107 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     lastCaptureBlob = null;
 
-    // カメラ再起動（再撮影）
+    // 再撮影
     startCamera();
   }
 
-  // ---- シャッター：見えているサイズで撮影 → フレーム画像を必ず待ってから合成
+  // =================== Fabric.js：スタンプ ===================
+  function initFabricCanvas() {
+    if (fcanvas) { resizeStampCanvas(); return; }
+
+    fcanvas = new fabric.Canvas(stampCanvasEl, {
+      selection: true,
+      preserveObjectStacking: true
+    });
+    resizeStampCanvas();
+  }
+
+  function resizeStampCanvas() {
+    if (!stampCanvasEl) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = document.querySelector('.container').getBoundingClientRect();
+
+    const cssW = Math.max(1, Math.round(rect.width));
+    const cssH = Math.max(1, Math.round(rect.height));
+
+    stampCanvasEl.width  = Math.round(cssW * dpr);
+    stampCanvasEl.height = Math.round(cssH * dpr);
+    stampCanvasEl.style.width  = cssW + 'px';
+    stampCanvasEl.style.height = cssH + 'px';
+
+    if (fcanvas) {
+      fcanvas.setWidth(cssW);
+      fcanvas.setHeight(cssH);
+      fcanvas.setZoom(dpr);
+      fcanvas.renderAll();
+    }
+  }
+
+  function addStampFromURL(url) {
+    if (!fcanvas) return;
+    const cssW = fcanvas.getWidth();
+    const cssH = fcanvas.getHeight();
+
+    fabric.Image.fromURL(url, (img) => {
+      img.set({
+        originX: 'center',
+        originY: 'center',
+        left: cssW / 2,
+        top:  cssH / 2,
+        selectable: true,
+        transparentCorners: false,
+        cornerColor: '#ff5b82',
+        cornerStyle: 'circle',
+        borderColor: '#ff5b82',
+        cornerSize: 14
+      });
+      const base = Math.min(cssW, cssH) * 0.3; // 初期サイズ：短辺の30%
+      const scale = base / img.width;
+      img.scale(scale);
+
+      fcanvas.add(img);
+      fcanvas.setActiveObject(img);
+      fcanvas.renderAll();
+    }, { crossOrigin: 'anonymous' });
+  }
+
+  function openStampSheet() {
+    stampSheet.classList.add('open');
+    isSheetOpen = true;
+    stampCanvasEl.classList.add('interactive'); // 編集中はタッチ拾う
+  }
+  function closeStampSheet() {
+    stampSheet.classList.remove('open');
+    isSheetOpen = false;
+    stampCanvasEl.classList.remove('interactive');
+  }
+
+  stampButton?.addEventListener('click', () => {
+    if (!fcanvas) initFabricCanvas();
+    if (isSheetOpen) closeStampSheet(); else openStampSheet();
+  });
+  sheetCloseBtn?.addEventListener('click', closeStampSheet);
+
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.stamp-thumb');
+    if (!btn) return;
+    const src = btn.getAttribute('data-src');
+    if (src) {
+      addStampFromURL(src);
+      // closeStampSheet(); // 自動で閉じたければ有効化
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    resizeStampCanvas();
+    if (fcanvas) fcanvas.calcOffset();
+  });
+
+  // =================== シャッター（スタンプ合成を追加） ===================
   shutterButton.addEventListener('click', async () => {
     if (!stream || !cameraFeed.srcObject) return;
 
-    // キャンバスの出力サイズは可視のvideoと一致させる
+    // キャンバスの出力サイズは可視の video と一致
     const cw = cameraFeed.clientWidth;
     const ch = cameraFeed.clientHeight;
 
@@ -211,16 +312,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       sy = Math.round((vh - sHeight) / 2);
     }
 
-    // 1) カメラ画像を描く
+    // 1) カメラ画像
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
     canvasContext.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, photoCanvas.width, photoCanvas.height);
 
-    // 2) フレーム画像のロード完了を保証してから合成（ここが重要）
+    // 1.5) スタンプ（Fabricキャンバス）を合成
+    if (fcanvas) {
+      canvasContext.drawImage(
+        stampCanvasEl,
+        0, 0, stampCanvasEl.width, stampCanvasEl.height,
+        0, 0, photoCanvas.width, photoCanvas.height
+      );
+    }
+
+    // 2) フレーム（ロード完了を保証 → 合成）
     await ensureFramesReady();
     drawFramesToCanvas();
 
-    // 3) ストリーム停止 → 写真ビュー化 → モーダルにプレビュー
+    // 3) ストリーム停止 → ビュー切替 → プレビュー
     stream.getTracks().forEach(t => t.stop());
     cameraFeed.srcObject = null;
     setCameraView(false);
@@ -228,7 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openPreviewModalWithCanvas(photoCanvas);
   });
 
-  // ---- プレビューモーダルの操作
+  // プレビューモーダル操作
   previewSaveBtn.addEventListener('click', () => {
     const url = photoCanvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -248,7 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
       }
-      // フォールバック：保存してから共有を案内
+      // フォールバック：保存に誘導
       const url = photoCanvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
