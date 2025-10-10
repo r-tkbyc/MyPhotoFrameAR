@@ -151,6 +151,7 @@ body {
 .modal {
     display: none; /* 初期状態では非表示 */
     position: fixed; /* 画面に固定 */
+    inset: 0; /* top:0; right:0; bottom:0; left:0; の略 */
     z-index: 1000; /* 他の要素より手前に表示 */
     left: 0;
     top: 0;
@@ -231,6 +232,15 @@ body {
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
   padding: 16px 16px 20px;
+}
+
+#previewModal.modal { padding: 0; }  /* パディング起因の左右ズレを排除 */
+.preview-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);  /* 物理的な中央 */
+  margin: 0;                         /* 念のため */
 }
 
 .preview-close {
