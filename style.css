@@ -93,6 +93,32 @@ body {
   flex: 0 0 auto;        /* ← flex での引き伸ばしを禁止 */
 }
 
+/* --- シャッターボタン：内側の赤い円は疑似要素で厳密な真円に --- */
+#shutterButton {
+  position: absolute;        /* 既存どおり（中央寄せは既存の transform でOK） */
+  /* 正円の外枠は既存ルールのままでOK（70px / border-radius:50% など） */
+  /* 念のため相対基準を明示しておく */
+  position: absolute;
+}
+
+/* 既存の子要素 .icon-circle は非表示に（重複描画を防ぐ） */
+#shutterButton .icon-circle {
+  display: none !important;
+}
+
+/* 内側の赤い円を ::before で絶対配置（常に正円） */
+#shutterButton::before {
+  content: "";
+  position: absolute;
+  /* 親70pxから内側に10pxずつ＝直径50px（既存デザインと同じ見た目） */
+  inset: 10px;                     /* top/right/bottom/left を同値に */
+  border: 3px solid #ff0000;       /* 赤い線 */
+  border-radius: 50%;              /* 真円 */
+  background: #fff;                /* 白の内側 */
+  box-sizing: border-box;          /* 枠線分も含めて計算 */
+  pointer-events: none;            /* タップに干渉しない */
+}
+
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
 
 /* ==================== バージョン情報 ==================== */
