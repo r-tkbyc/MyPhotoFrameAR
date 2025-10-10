@@ -232,7 +232,7 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
   padding: 16px 16px 20px;
 }
-/* 子ボックスを座標中央に固定（パディングの影響を受けない） */
+/* （↑上書き）子ボックスを座標中央に固定（パディングの影響を受けない） */
 .preview-wrap {
   position: fixed;
   top: 50%;
