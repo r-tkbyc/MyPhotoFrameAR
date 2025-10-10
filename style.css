@@ -1,246 +1,191 @@
 /*
- * style.css
+ * style.css (refactored)
  * スマートフォン向けカメラアプリのスタイルシート
  */
 
 /* ==================== 汎用スタイル ==================== */
 body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    display: flex; /* flexboxで中央寄せ */
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh; /* 画面高さいっぱい */
-    background-color: #f0f2f5; /* 背景色 */
-    overflow: hidden; /* スクロールバーが出ないように */
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  display: flex;                 /* flexboxで中央寄せ */
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;             /* 画面高さいっぱい */
+  background-color: #f0f2f5;     /* 背景色 */
+  overflow: hidden;              /* スクロールバーが出ないように */
 }
 
-/* モーダル表示時にbodyのスクロールを無効にするユーティリティクラス */
-.modal-open {
-    overflow: hidden;
-}
+/* モーダル表示時にbodyのスクロールを無効にする */
+.modal-open { overflow: hidden; }
 
 /* 要素の表示/非表示を切り替えるユーティリティクラス */
-.hidden {
-    display: none !important;
-}
+.hidden { display: none !important; }
 
 /* ==================== コンテナレイアウト ==================== */
 .container {
-    position: relative; /* 子要素の絶対配置の基準 */
-    width: 100%; /* 画面幅いっぱいに */
-    max-width: 600px; /* PCなど大画面での最大幅 */
-    height: 100vh; /* 画面高さいっぱい */
-    display: block; /* ブロック要素として振る舞う */
-    background-color: #fff;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* 軽い影 */
-    overflow: hidden; /* 子要素がはみ出さないように */
+  position: relative;            /* 子要素の絶対配置の基準 */
+  width: 100%;
+  max-width: 600px;              /* PCなど大画面での最大幅 */
+  height: 100vh;                 /* 画面高さいっぱい */
+  display: block;
+  background-color: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  overflow: hidden;              /* 子要素がはみ出さないように */
 }
 
 /* ==================== カメラ映像とキャンバス ==================== */
-#cameraFeed {
-    display: block;
-    position: absolute; /* containerに対して絶対配置 */
-    top: 0;
-    left: 0;
-    width: 100%; /* 親要素(container)に合わせる */
-    height: 100%; /* 親要素(container)に合わせる */
-    object-fit: cover; /* 縦横比を維持しつつ、要素を完全に覆う */
-    z-index: 1; /* ボタンより奥 */
+#cameraFeed,
+#photoCanvas {
+  position: absolute;            /* containerに対して絶対配置 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
+#cameraFeed { z-index: 1; }      /* ボタンより奥 */
 #photoCanvas {
-    position: absolute; /* containerに対して絶対配置 */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 2; /* カメラ映像より手前、ボタンより奥 */
-    background-color: black; /* 念のため背景色を指定、白くなる問題を特定しやすく */
+  z-index: 2;                    /* カメラ映像より手前、ボタンより奥 */
+  background-color: black;       /* 念のため背景色を指定 */
 }
 
 /* ==================== 制御ボタン (シャッター、保存、再撮影) ==================== */
 .control-button {
-    position: absolute;
-    /* bottom: calc(15vh + env(safe-area-inset-bottom, 30px)); としても良いですが、
-       今回のコードはenv()のフォールバック値が0pxなので、そのままにしています。
-       必要であれば、安全のためにフォールバック値を変更してください。 */
-    bottom: calc(15vh + env(safe-area-inset-bottom, 0px)); /* 画面下部から15vh + セーフエリアの余白 */
-    background-color: rgba(255, 255, 255, 0.8); /* 半透明の白背景 */
-    border: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    transition: background-color 0.2s ease, transform 0.1s ease; /* ホバー/クリックアニメーション */
-    z-index: 10; /* 最前面に表示 */
+  position: absolute;
+  bottom: calc(15vh + env(safe-area-inset-bottom, 0px));
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  z-index: 10;                   /* 最前面に表示 */
 }
+.control-button:active { transform: scale(0.95); }
 
-.control-button:active {
-    transform: scale(0.95); /* クリック時の縮小アニメーション */
-}
-
-/* シャッターボタンの専用スタイル */
+/* シャッターボタン */
 #shutterButton {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%; /* 丸い形 */
-    left: 50%; /* 中央に配置 */
-    transform: translateX(-50%); /* 中央配置のための調整 */
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  left: 50%;                     /* 中央配置 */
+  transform: translateX(-50%);
 }
 
 /* シャッターボタンの内側の赤い円 */
 .icon-circle {
-    display: block;
-    width: 50px;
-    height: 50px;
-    border: 3px solid #ff0000; /* 内側の赤い円 */
-    border-radius: 50%;
-    background-color: white;
+  display: block;
+  width: 50px;
+  height: 50px;
+  border: 3px solid #ff0000;
+  border-radius: 50%;
+  background-color: white;
 }
 
-/* 保存ボタンの専用スタイル */
-#saveButton {
-    width: 90px;
-    height: 40px;
-    border-radius: 20px; /* 角丸のボタン */
-    background-color: #28a745; /* 緑色 */
-    color: white;
-    font-size: 1em;
-    left: calc(50% - 55px); /* 中央より少し左に配置 */
-    transform: translateX(-50%); /* 中央配置のための調整 */
-}
-
-#saveButton:hover {
-    background-color: #218838;
-}
-
-/* 再撮影ボタンの専用スタイル */
-#retakeButton {
-    width: 90px;
-    height: 40px;
-    border-radius: 20px; /* 角丸のボタン */
-    background-color: #007bff; /* 青色 */
-    color: white;
-    font-size: 1em;
-    left: calc(50% + 55px); /* 中央より少し右に配置 */
-    transform: translateX(-50%); /* 中央配置のための調整 */
-}
-
-#retakeButton:hover {
-    background-color: #0056b3;
-}
+/* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
 
 /* ==================== バージョン情報 ==================== */
 #versionInfo {
-    position: fixed; /* 画面に固定 */
-    top: 10px;       /* 上から10px */
-    left: 10px;      /* 左から10px */
-    z-index: 1001;   /* モーダルやボタンより手前に表示 */
-    background-color: rgba(0, 0, 0, 0.5); /* 半透明の黒背景 */
-    color: white;    /* 白い文字 */
-    padding: 3px 8px; /* 内側の余白 */
-    border-radius: 5px; /* 角を丸くする */
-    font-size: 0.7em; /* 小さめの文字サイズ */
-    pointer-events: none; /* マウスイベントを透過させ、下の要素をクリックできるようにする */
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1001;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.7em;
+  pointer-events: none;
 }
 
-/* ==================== モーダルウィンドウ ==================== */
+/* ==================== モーダルウィンドウ（共通） ==================== */
 .modal {
-    display: none; /* 初期状態では非表示 */
-    position: fixed; /* 画面に固定 */
-    inset: 0; /* top:0; right:0; bottom:0; left:0; の略 */
-    z-index: 1000; /* 他の要素より手前に表示 */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); /* 半透明の背景 */
-    display: flex; /* flexboxで中央寄せ */
-    justify-content: center;
-    align-items: center;
+  display: none;                 /* 初期は非表示 */
+  position: fixed;
+  inset: 0;                      /* 画面全体 */
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.6);
+  /* 見せるときは flex で中央寄せ（permissionModal / previewModal どちらでも有効） */
+  justify-content: center;
+  align-items: center;
 }
 
+/* 汎用モーダル内容 */
 .modal-content {
-    background-color: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    max-width: 80%;
-    animation: fadeIn 0.3s ease-out; /* フェードインアニメーション */
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  max-width: 80%;
+  animation: fadeIn 0.3s ease-out;
 }
-
 .modal-content p {
-    margin-bottom: 20px;
-    font-size: 1.1em;
-    color: #333;
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  color: #333;
 }
-
 .modal-content button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 25px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.2s ease;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.2s ease;
 }
-
-.modal-content button:hover {
-    background-color: #0056b3;
-}
+.modal-content button:hover { background-color: #0056b3; }
 
 /* フェードインアニメーション */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 追記：フレーム画像のベース */
-#frameTop, #frameBottom {
+/* ==================== フレーム画像 ==================== */
+#frameTop,
+#frameBottom {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%) scale(0.65);
-  transform-origin: center top;
-  width: auto;
+  transform: translateX(-50%) scale(0.65); /* 中央寄せ + 現状の縮尺 */
+  width: auto;                 /* 等倍ベース（JS側の方針を踏襲） */
   height: auto;
   pointer-events: none;
   z-index: 6;
 }
-
-/* 上フレームは上端固定、下フレームは下端固定 */
-#frameTop { top: 0; transform-origin: center top; }
-#frameBottom { bottom: 0; transform-origin: center bottom; }
-
-/* ▼ 追記：撮影プレビュー用モーダル */
-#previewModal.modal {
-  display: none;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
+/* それぞれの支点だけ個別指定（重複解消） */
+#frameTop {
+  top: 0;
+  transform-origin: center top;
 }
+#frameBottom {
+  bottom: 0;
+  transform-origin: center bottom;
+}
+
+/* ==================== 撮影プレビューモーダル ==================== */
+/* 表示切替（hiddenクラスが外れたら表示） */
 #previewModal:not(.hidden) { display: flex; }
 
+/* previewModal 固有：余白の左右非対称でズレないよう親の padding は 0 */
+#previewModal.modal { padding: 0; }
+
+/* 中身の枠を画面座標のど真ん中に固定（ズレ防止） */
 .preview-wrap {
-  position: relative;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: min(92vw, 640px);
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
   padding: 16px 16px 20px;
-}
-
-#previewModal.modal { padding: 0; }  /* パディング起因の左右ズレを排除 */
-.preview-wrap {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);  /* 物理的な中央 */
-  margin: 0;                         /* 念のため */
+  margin: 0;
 }
 
 .preview-close {
@@ -261,7 +206,7 @@ body {
   height: auto;
   max-height: 70vh;
   object-fit: contain;
-  background: #e5e7eb; /* うっすらグレー（読み込み時の土台） */
+  background: #e5e7eb;           /* 読み込み時の土台 */
   border-radius: 8px;
 }
 
@@ -285,6 +230,5 @@ body {
   padding: 0 16px;
   cursor: pointer;
 }
-
-.preview-btn.primary { background: #28a745; } /* 保存：緑 */
-.preview-btn.danger  { background: #a1a1aa; } /* 閉じる：グレー */
+.preview-btn.primary { background: #28a745; }  /* 保存：緑 */
+.preview-btn.danger  { background: #a1a1aa; }  /* 閉じる：グレー */
