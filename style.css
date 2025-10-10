@@ -97,9 +97,12 @@ body {
 
 /* （上書き）内側の赤い円も比率固定（親が正円なら常に真円に） */
 #shutterButton .icon-circle {
-  width: 50%;              /* 親の半分にしてもOK。現状の50px固定でも可 */
-  height: 50%;
-  border-width: 3px;       /* 見た目そのまま */
+  display: block;
+  width: 50px;
+  height: 50px;
+  border: 3px solid #ff0000;
+  border-radius: 50%;
+  background-color: #fff;
 }
 
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
