@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const previewCloseBtn = document.getElementById('previewCloseBtn');
   const previewCloseX   = document.getElementById('previewCloseX');
 
-  // フレーム画像（DOM上に配置されていることが前提）
+  // フレーム画像（DOM上に配置されている前提）
   const frameTopEl    = document.getElementById('frameTop');
   const frameBottomEl = document.getElementById('frameBottom');
-  // CSSの scale(0.65) に合わせる（表示と保存の見え方を一致）
+  // 表示と一致させる縮尺（CSSの scale と同値）
   const FRAME_SCALE = 0.65;
 
   let stream = null;
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let lastCaptureBlob = null;
   let lastCaptureObjectURL = null;
 
-  // カメラ表示/撮影結果の切り替え（旧save/retakeボタンは廃止済み）
+  // カメラ表示/撮影結果の切り替え
   const setCameraView = (isCameraActive) => {
     if (isCameraActive) {
       cameraFeed.classList.remove('hidden');
@@ -100,6 +100,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.classList.remove('modal-open');
   });
 
+  // ---- フレーム画像のロード完了を保証する
+  function waitImage(el) {
+    return new Promise((resolve) => {
+      if (!el) return resolve(null);
+      if (el.complete && el.naturalWidth && el.naturalHeight) return resolve(el);
+      el.addEventListener('load', () => resolve(el), { once: true });
+      el.addEventListener('error', () => resolve(null), { once: true });
+    });
+  }
+  async function ensureFramesReady() {
+    const [top, bottom] = await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
+    return { top, bottom };
+  }
+
   // ---- フレーム合成：表示と同じ（中央寄せ・上下端揃え・縮尺0.65）でキャンバスへ描画
   function drawFramesToCanvas() {
     const cw = photoCanvas.width;
@@ -108,18 +122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const drawOne = (imgEl, place) => {
       if (!imgEl) return;
-      const doDraw = () => {
-        const iw = imgEl.naturalWidth;
-        const ih = imgEl.naturalHeight;
-        if (!iw || !ih) return;
-        const drawW = Math.round(iw * FRAME_SCALE);
-        const drawH = Math.round(ih * FRAME_SCALE);
-        const dx = Math.round((cw - drawW) / 2);         // 中央寄せ（はみ出しOK）
-        const dy = (place === 'top') ? 0 : (ch - drawH); // 上端／下端揃え
-        ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
-      };
-      if (imgEl.complete) doDraw();
-      else imgEl.addEventListener('load', doDraw, { once: true });
+      const iw = imgEl.naturalWidth;
+      const ih = imgEl.naturalHeight;
+      if (!iw || !ih) return;
+      const drawW = Math.round(iw * FRAME_SCALE);
+      const drawH = Math.round(ih * FRAME_SCALE);
+      const dx = Math.round((cw - drawW) / 2);         // 中央寄せ（はみ出しOK）
+      const dy = (place === 'top') ? 0 : (ch - drawH); // 上端／下端揃え
+      ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
 
     drawOne(frameTopEl, 'top');
@@ -128,7 +138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- モーダル用：canvas から Blob/URL を作って差し込む
   function openPreviewModalWithCanvas(canvas) {
-    // 既存URLのクリーンアップ
     if (lastCaptureObjectURL) {
       URL.revokeObjectURL(lastCaptureObjectURL);
       lastCaptureObjectURL = null;
@@ -148,21 +157,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 'image/png');
   }
 
-  function refreshPreviewImageFromCanvas() {
-    // すでにモーダルが開いている場合、合成更新を反映（フレーム画像が遅延ロードしたケースなど）
-    if (!previewModal || previewModal.classList.contains('hidden')) return;
-    if (lastCaptureObjectURL) {
-      URL.revokeObjectURL(lastCaptureObjectURL);
-      lastCaptureObjectURL = null;
-    }
-    photoCanvas.toBlob((blob) => {
-      if (!blob) return;
-      lastCaptureBlob = blob;
-      lastCaptureObjectURL = URL.createObjectURL(blob);
-      previewImage.src = lastCaptureObjectURL;
-    }, 'image/png');
-  }
-
   function closePreviewModalAndRetake() {
     previewModal.classList.add('hidden');
     document.body.classList.remove('modal-open');
@@ -177,8 +171,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     startCamera();
   }
 
-  // ---- シャッター：見えているサイズで撮影（object-fit:cover相当でクロップ）
-  shutterButton.addEventListener('click', () => {
+  // ---- シャッター：見えているサイズで撮影 → フレーム画像を必ず待ってから合成
+  shutterButton.addEventListener('click', async () => {
     if (!stream || !cameraFeed.srcObject) return;
 
     // キャンバスの出力サイズは可視のvideoと一致させる
@@ -222,7 +216,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
     canvasContext.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, photoCanvas.width, photoCanvas.height);
 
-    // 2) 直後にフォトフレームを合成（表示と同じ見え方）
+    // 2) フレーム画像のロード完了を保証してから合成（ここが重要）
+    await ensureFramesReady();
     drawFramesToCanvas();
 
     // 3) ストリーム停止 → 写真ビュー化 → モーダルにプレビュー
@@ -230,20 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     cameraFeed.srcObject = null;
     setCameraView(false);
 
-    // フレームが遅延ロード中でも、まずは描けた分で表示
     openPreviewModalWithCanvas(photoCanvas);
-
-    // もしフレーム画像がこの時点で未ロードだった場合、load後に再プレビュー更新
-    const tryRefreshAfterLoad = (imgEl) => {
-      if (!imgEl) return;
-      if (imgEl.complete) {
-        refreshPreviewImageFromCanvas();
-      } else {
-        imgEl.addEventListener('load', () => refreshPreviewImageFromCanvas(), { once: true });
-      }
-    };
-    tryRefreshAfterLoad(frameTopEl);
-    tryRefreshAfterLoad(frameBottomEl);
   });
 
   // ---- プレビューモーダルの操作
