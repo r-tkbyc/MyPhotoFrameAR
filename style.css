@@ -85,6 +85,23 @@ body {
   background-color: white;
 }
 
+/* （上書き）正円固定＆iOSのデフォルト装飾回避 */
+#shutterButton {
+  aspect-ratio: 1 / 1;     /* ← これで正方形を保証（幅優先） */
+  height: auto;            /* widthに従って自動計算 */
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  line-height: 0;          /* iOSでの行ボックスの影響を無効化 */
+}
+
+/* （上書き）内側の赤い円も比率固定（親が正円なら常に真円に） */
+#shutterButton .icon-circle {
+  width: 50%;              /* 親の半分にしてもOK。現状の50px固定でも可 */
+  height: 50%;
+  border-width: 3px;       /* 見た目そのまま */
+}
+
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
 
 /* ==================== バージョン情報 ==================== */
@@ -167,6 +184,25 @@ body {
   transform-origin: center bottom;
 }
 
+/* （上書き）フレームは等倍ベース＋等比スケールのみ（横/縦の個別指定を避ける） */
+#frameTop,
+#frameBottom {
+  width: auto;             /* 横幅を％指定しない＝縦横比を保持 */
+  height: auto;
+  max-width: none;
+  max-height: none;
+  transform: translateX(-50%) scale(0.65); /* ← 等比のみ（既存値） */
+  image-rendering: auto;   /* 品質優先（お好みで） */
+}
+
+/* （スタンプ用ガイド）今後の.stamp系も同様に */
+.stamp {
+  width: auto;
+  height: auto;
+  transform-origin: center center;
+  /* 位置は translate/translate3d、拡縮は scale(s) のみを使う（scaleX/scaleY別指定はしない） */
+}
+
 /* ==================== 撮影プレビューモーダル ==================== */
 /* 表示切替（hiddenクラスが外れたら表示） */
 #previewModal:not(.hidden) { display: flex; }
@@ -232,3 +268,4 @@ body {
 }
 .preview-btn.primary { background: #28a745; }  /* 保存：緑 */
 .preview-btn.danger  { background: #a1a1aa; }  /* 閉じる：グレー */
+
