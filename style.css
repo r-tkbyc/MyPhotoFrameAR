@@ -1,5 +1,5 @@
 /*
- * style.css (refactored)
+ * style.css (refactored, simple shutter image)
  * スマートフォン向けカメラアプリのスタイルシート
  */
 
@@ -10,232 +10,110 @@ body {
   display: flex;                 /* flexboxで中央寄せ */
   justify-content: center;
   align-items: center;
-  min-height: 100vh;             /* 画面高さいっぱい */
-  background-color: #f0f2f5;     /* 背景色 */
-  overflow: hidden;              /* スクロールバーが出ないように */
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  overflow: hidden;              /* スクロールバー抑止 */
 }
 
 /* モーダル表示時にbodyのスクロールを無効にする */
 .modal-open { overflow: hidden; }
 
-/* 要素の表示/非表示を切り替えるユーティリティクラス */
+/* 要素の表示/非表示切替 */
 .hidden { display: none !important; }
 
 /* ==================== コンテナレイアウト ==================== */
 .container {
-  position: relative;            /* 子要素の絶対配置の基準 */
+  position: relative;            /* 子要素の絶対配置基準 */
   width: 100%;
-  max-width: 600px;              /* PCなど大画面での最大幅 */
-  height: 100vh;                 /* 画面高さいっぱい */
+  max-width: 600px;              /* PCなどでの最大幅 */
+  height: 100vh;
   display: block;
   background-color: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  overflow: hidden;              /* 子要素がはみ出さないように */
+  overflow: hidden;              /* はみ出しカット（スクロール防止） */
 }
 
 /* ==================== カメラ映像とキャンバス ==================== */
 #cameraFeed,
 #photoCanvas {
-  position: absolute;            /* containerに対して絶対配置 */
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   object-fit: cover;
 }
 
-#cameraFeed { z-index: 1; }      /* ボタンより奥 */
+#cameraFeed { z-index: 1; }
 #photoCanvas {
-  z-index: 2;                    /* カメラ映像より手前、ボタンより奥 */
-  background-color: black;       /* 念のため背景色を指定 */
+  z-index: 2;
+  background-color: black;       /* デバッグ用の黒背景 */
 }
 
-/* ==================== 制御ボタン (シャッター) ==================== */
+/* ==================== 制御ボタン（シャッター） ==================== */
 .control-button {
   position: absolute;
   bottom: calc(15vh + env(safe-area-inset-bottom, 0px));
-  background-color: rgba(255, 255, 255, 0.8);
   border: none;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: transform 0.1s ease;
   z-index: 10;
+  background: transparent;       /* 半透明の丸は使わない */
+  box-shadow: none;              /* 影も使わない */
 }
 .control-button:active { transform: scale(0.95); }
 
-/* シャッターボタン（真円固定＋iOS既定装飾オフ） */
+/* シャッターボタン（画像のみ・比率ベース） */
 #shutterButton {
-  width: 70px;
-  aspect-ratio: 1 / 1;   /* ← 正方形保証（真円の土台） */
+  width: clamp(12vmin, 16vmin, 20vmin);  /* ← 最小/理想/最大を“比率”だけで指定（px不使用） */
+  aspect-ratio: 1 / 1;
   height: auto;
   border-radius: 50%;
   left: 50%;
   transform: translateX(-50%);
-  -webkit-appearance: none;
-  appearance: none;
-  box-sizing: border-box;
-  line-height: 0;
-}
-
-/* 内側の赤い円（正円強制：端末差での縦伸びを防ぐ） */
-#shutterButton .icon-circle {
-  display: block;
-  width: 72%;            /* 親の中で適度な余白（お好みで 50%〜80%） */
-  aspect-ratio: 1 / 1;   /* ← 正円を強制 */
-  height: auto;          /* width に従う */
-  border: 3px solid #ff0000;
-  border-radius: 50%;
-  background-color: #fff;
-  box-sizing: border-box;
-  flex: 0 0 auto;        /* ← flex での引き伸ばしを禁止 */
-}
-
-/* --- シャッターボタン：内側の赤い円は疑似要素で厳密な真円に --- */
-#shutterButton {
-  position: absolute;        /* 既存どおり（中央寄せは既存の transform でOK） */
-  /* 正円の外枠は既存ルールのままでOK（70px / border-radius:50% など） */
-  /* 念のため相対基準を明示しておく */
-  position: absolute;
-}
-
-/* 既存の子要素 .icon-circle は非表示に（重複描画を防ぐ） */
-#shutterButton .icon-circle {
-  display: none !important;
-}
-
-/* 内側の赤い円を ::before で絶対配置（常に正円） */
-#shutterButton::before {
-  content: "";
-  position: absolute;
-  /* 親70pxから内側に10pxずつ＝直径50px（既存デザインと同じ見た目） */
-  inset: 10px;                     /* top/right/bottom/left を同値に */
-  border: 3px solid #ff0000;       /* 赤い線 */
-  border-radius: 50%;              /* 真円 */
-  background: #fff;                /* 白の内側 */
-  box-sizing: border-box;          /* 枠線分も含めて計算 */
-  pointer-events: none;            /* タップに干渉しない */
-}
-
-/* --- シャッターボタンを画像表示に切り替え（位置・サイズは現状維持） --- */
-#shutterButton {
-  width: 70px;                /* 既存のまま */
-  aspect-ratio: 1 / 1;        /* 正方形を保証（機種差での歪み防止） */
-  height: auto;
-  border-radius: 50%;
-  left: 50%;
-  transform: translateX(-50%);
-  -webkit-appearance: none;
-  appearance: none;
-  box-sizing: border-box;
-  line-height: 0;
-  padding: 0;                 /* 画像枠がズレないよう */
-  background: none;           /* 余計な背景を消す */
-  border: none;
-}
-
-/* 画像をボタンいっぱいにフィット（縦横比維持） */
-#shutterImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;        /* 画像の比率を保って内接 */
-  pointer-events: none;       /* タップはボタンに通す */
-}
-
-/* 旧実装の重なりを無効化（赤い円や疑似要素を消す） */
-#shutterButton .icon-circle { display: none !important; }
-#shutterButton::before { display: none !important; }
-
-/* === シャッターボタン画像サイズ・半透明・影を一括で調整できるセット === */
-#shutterButton {
-  /* 調整用のカスタムプロパティ（数値を変えれば全部ついてきます） */
-  --shutter-size: 90px;                 /* 画像を含むボタン全体サイズ（例: 90px） */
-  --img-scale: 88%;                     /* 画像自体の大きさ（ボタンに対する％） */
-  --halo-opacity: 0.85;                 /* 後ろの半透明の濃さ（0〜1） */
-  --halo-inset: 6px;                    /* 半透明円の内側余白（小さいほど広がる） */
-  --shadow-elev: 0 4px 10px rgba(0,0,0,0.28); /* 影の強さ */
-
-  width: var(--shutter-size);
-  aspect-ratio: 1 / 1;                  /* 正方形を保証＝歪み防止 */
-  height: auto;
-  border-radius: 50%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: transparent !important;   /* 既存の半透明背景は使わない */
-  box-shadow: none !important;          /* 既存の影もここでは無効化 */
   -webkit-appearance: none;
   appearance: none;
   box-sizing: border-box;
   line-height: 0;
   padding: 0;
-  position: absolute;                   /* 既存どおり中央起点 */
+  background: none;
 }
 
-/* 画像をボタン内でセンタリング＋スケール（比率維持） */
 #shutterImage {
   display: block;
-  width: var(--img-scale);
-  height: var(--img-scale);
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  margin: auto;                         /* ボタン内で中央寄せ */
-  pointer-events: none;                 /* タップはボタンに通す */
+  pointer-events: none;
   background: transparent;
 }
 
-/* 旧：赤丸や子要素を無効化（二重表示防止） */
+/* （旧実装）赤い円の子要素や疑似要素は完全無効化 */
 #shutterButton .icon-circle { display: none !important; }
-
-/* 半透明の白丸（画像の後ろ）。ボタンサイズに追従して常に真円 */
-#shutterButton::before {
-  content: "";
-  position: absolute;
-  inset: var(--halo-inset);             /* 余白ぶんだけ内側に小さく */
-  border-radius: 50%;
-  background: rgba(255,255,255,var(--halo-opacity));
-  box-sizing: border-box;
-  pointer-events: none;
-  z-index: 0;                           /* 画像より背面 */
-}
-
-/* 影（画像サイズに追従）。外周ぴったりの真円に影を落とす */
-#shutterButton::after {
-  content: "";
-  position: absolute;
-  inset: 0;                             /* ボタン全体を覆う真円 */
-  border-radius: 50%;
-  box-shadow: var(--shadow-elev);
-  pointer-events: none;
-  z-index: 0;                           /* 画像より背面 */
-}
-
-/* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
+#shutterButton::before      { content: none !important; }
 
 /* ==================== バージョン情報 ==================== */
 #versionInfo {
   position: fixed;
-  top: 10px;
-  left: 10px;
+  top: 10px; left: 10px;
   z-index: 1001;
   background-color: rgba(0, 0, 0, 0.5);
-  color: white;
+  color: #fff;
   padding: 3px 8px;
   border-radius: 5px;
   font-size: 0.7em;
   pointer-events: none;
 }
 
-/* ==================== モーダルウィンドウ（共通） ==================== */
+/* ==================== モーダル（共通） ==================== */
 .modal {
   display: none;                 /* 初期は非表示 */
   position: fixed;
   inset: 0;                      /* 画面全体 */
   z-index: 1000;
   background-color: rgba(0, 0, 0, 0.6);
-  /* 見せるときは flex で中央寄せ（permissionModal / previewModal どちらでも有効） */
-  justify-content: center;
+  justify-content: center;       /* 表示時は中央寄せ（各モーダルで display 制御） */
   align-items: center;
 }
 
@@ -256,7 +134,7 @@ body {
 }
 .modal-content button {
   background-color: #007bff;
-  color: white;
+  color: #fff;
   border: none;
   padding: 10px 25px;
   border-radius: 5px;
@@ -266,7 +144,7 @@ body {
 }
 .modal-content button:hover { background-color: #0056b3; }
 
-/* フェードインアニメーション */
+/* フェードイン */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-20px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -277,13 +155,12 @@ body {
 #frameBottom {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%) scale(0.65); /* 中央寄せ + 現状の縮尺 */
-  width: auto;                 /* 等倍ベース（JS側の方針を踏襲） */
-  height: auto;
+  transform: translateX(-50%) scale(0.65); /* 中央寄せ + 現状縮尺 */
+  transform-origin: center center;          /* 共通は center、上下の支点は個別で上書き */
+  width: auto; height: auto;                /* 等倍ベース（縦横比維持） */
   pointer-events: none;
   z-index: 6;
 }
-/* それぞれの支点だけ個別指定（重複解消） */
 #frameTop {
   top: 0;
   transform-origin: center top;
@@ -293,37 +170,24 @@ body {
   transform-origin: center bottom;
 }
 
-/* （上書き）フレームは等倍ベース＋等比スケールのみ（横/縦の個別指定を避ける） */
-#frameTop,
-#frameBottom {
-  width: auto;             /* 横幅を％指定しない＝縦横比を保持 */
-  height: auto;
-  max-width: none;
-  max-height: none;
-  transform: translateX(-50%) scale(0.65); /* ← 等比のみ（既存値） */
-  image-rendering: auto;   /* 品質優先（お好みで） */
-}
-
-/* （スタンプ用ガイド）今後の.stamp系も同様に */
+/* 今後のスタンプ用ガイド（等比維持） */
 .stamp {
-  width: auto;
-  height: auto;
+  width: auto; height: auto;
   transform-origin: center center;
-  /* 位置は translate/translate3d、拡縮は scale(s) のみを使う（scaleX/scaleY別指定はしない） */
+  /* 位置は translate/translate3d、拡縮は scale(s)（scaleX/scaleY を分けない） */
 }
 
 /* ==================== 撮影プレビューモーダル ==================== */
 /* 表示切替（hiddenクラスが外れたら表示） */
 #previewModal:not(.hidden) { display: flex; }
 
-/* previewModal 固有：余白の左右非対称でズレないよう親の padding は 0 */
+/* previewModal 固有：親の padding は 0（ズレ防止） */
 #previewModal.modal { padding: 0; }
 
-/* 中身の枠を画面座標のど真ん中に固定（ズレ防止） */
+/* 中身の枠を座標のど真ん中に固定 */
 .preview-wrap {
   position: fixed;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: min(92vw, 640px);
   background: #fff;
@@ -335,8 +199,7 @@ body {
 
 .preview-close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 8px; right: 10px;
   border: none;
   background: transparent;
   font-size: 28px;
@@ -347,11 +210,10 @@ body {
 
 #previewImage {
   display: block;
-  width: 100%;
-  height: auto;
+  width: 100%; height: auto;
   max-height: 70vh;
   object-fit: contain;
-  background: #e5e7eb;           /* 読み込み時の土台 */
+  background: #e5e7eb;
   border-radius: 8px;
 }
 
@@ -377,4 +239,3 @@ body {
 }
 .preview-btn.primary { background: #28a745; }  /* 保存：緑 */
 .preview-btn.danger  { background: #a1a1aa; }  /* 閉じる：グレー */
-
