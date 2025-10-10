@@ -233,12 +233,27 @@ body {
 
 /* ==================== ボトムシート（スタンプ選択） ==================== */
 #stampSheet {
+  /* ← 出現量（高さ）をここでまとめて調整：半画面ちょい */
+  --sheet-height: 55vh;
+
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  transform: translateY(100%);            /* 初期は非表示（下に隠す） */
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* 初期は下に隠す（開くときは .open を付与） */
+  transform: translateY(100%);
   transition: transform .25s ease-out;
+
+  /* 半透明＆ぼかし */
   background: rgba(0,0,0,.55);
   backdrop-filter: blur(4px);
+
+  /* 高さを固定（出現量を一定に） */
+  height: var(--sheet-height);
+  min-height: var(--sheet-height);
+  max-height: var(--sheet-height);
+
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom,0px));
   z-index: 9;
   border-top-left-radius: 12px;
@@ -247,29 +262,50 @@ body {
 #stampSheet.open { transform: translateY(0); }
 
 #stampSheet .sheet-handle{
-  width: 40px; height: 4px; border-radius: 999px;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
   background: rgba(255,255,255,.7);
   margin: 4px auto 8px;
 }
 #stampSheet .sheet-header{
-  display:flex; align-items:center; justify-content:space-between;
-  color:#fff; font-weight:600; margin: 0 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  font-weight: 600;
+  margin: 0 4px 10px;
 }
 #stampSheet .sheet-close{
-  border:none; background: transparent; color:#fff; font-size: 24px; line-height:1; cursor:pointer;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
 }
 
-/* サムネグリッド */
+/* サムネグリッド（中スクロール） */
 .stamp-grid{
-  display:grid;
+  display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
+
+  /* ヘッダー分を差し引いて、シート内だけスクロール */
+  max-height: calc(var(--sheet-height) - 72px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .stamp-thumb{
-  border:none; padding:8px; border-radius:10px;
+  border: none;
+  padding: 8px;
+  border-radius: 10px;
   background: rgba(255,255,255,.18);
   cursor: pointer;
 }
 .stamp-thumb img{
-  display:block; width:100%; height:100%; object-fit:contain;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
