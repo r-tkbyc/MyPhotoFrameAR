@@ -50,7 +50,7 @@ body {
   background-color: black;       /* 念のため背景色を指定 */
 }
 
-/* ==================== 制御ボタン (シャッター、保存、再撮影) ==================== */
+/* ==================== 制御ボタン (シャッター) ==================== */
 .control-button {
   position: absolute;
   bottom: calc(15vh + env(safe-area-inset-bottom, 0px));
@@ -62,47 +62,35 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   transition: background-color 0.2s ease, transform 0.1s ease;
-  z-index: 10;                   /* 最前面に表示 */
+  z-index: 10;
 }
 .control-button:active { transform: scale(0.95); }
 
-/* シャッターボタン */
+/* シャッターボタン（真円固定＋iOS既定装飾オフ） */
 #shutterButton {
   width: 70px;
-  height: 70px;
+  aspect-ratio: 1 / 1;   /* ← 正方形保証（真円の土台） */
+  height: auto;
   border-radius: 50%;
-  left: 50%;                     /* 中央配置 */
+  left: 50%;
   transform: translateX(-50%);
-}
-
-/* シャッターボタンの内側の赤い円 */
-.icon-circle {
-  display: block;
-  width: 50px;
-  height: 50px;
-  border: 3px solid #ff0000;
-  border-radius: 50%;
-  background-color: white;
-}
-
-/* （上書き）正円固定＆iOSのデフォルト装飾回避 */
-#shutterButton {
-  aspect-ratio: 1 / 1;     /* ← これで正方形を保証（幅優先） */
-  height: auto;            /* widthに従って自動計算 */
   -webkit-appearance: none;
   appearance: none;
   box-sizing: border-box;
-  line-height: 0;          /* iOSでの行ボックスの影響を無効化 */
+  line-height: 0;
 }
 
-/* （上書き）内側の赤い円も比率固定（親が正円なら常に真円に） */
+/* 内側の赤い円（正円強制：端末差での縦伸びを防ぐ） */
 #shutterButton .icon-circle {
   display: block;
-  width: 50px;
-  height: 50px;
+  width: 72%;            /* 親の中で適度な余白（お好みで 50%〜80%） */
+  aspect-ratio: 1 / 1;   /* ← 正円を強制 */
+  height: auto;          /* width に従う */
   border: 3px solid #ff0000;
   border-radius: 50%;
   background-color: #fff;
+  box-sizing: border-box;
+  flex: 0 0 auto;        /* ← flex での引き伸ばしを禁止 */
 }
 
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
