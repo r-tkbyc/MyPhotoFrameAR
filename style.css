@@ -149,6 +149,30 @@ body {
 #shutterButton .icon-circle { display: none !important; }
 #shutterButton::before { display: none !important; }
 
+/* シャッターボタンの背景/影/旧要素を完全オフ */
+#shutterButton {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#shutterButton::before {
+  content: none !important;   /* 旧：赤丸の疑似要素を確実に無効化 */
+}
+
+#shutterButton .icon-circle {
+  display: none !important;   /* 旧：子要素の赤丸を確実に非表示 */
+}
+
+/* 画像自体に余白や背景が入らないよう最終確認 */
+#shutterImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent !important;
+}
+
+
 /* （※ 旧UIの保存/再撮影ボタン用のスタイルは削除しても挙動に影響なし） */
 
 /* ==================== バージョン情報 ==================== */
