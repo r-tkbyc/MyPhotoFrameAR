@@ -50,9 +50,8 @@ body {
   width: 100%;
   height: 100%;
   z-index: 5;              /* camera(1) < photo(2) < stamp(5) < frame(6) */
-  pointer-events: none;    /* 編集時のみ .interactive で有効化 */
+  pointer-events: auto;    /* ← 常に操作可能にする（.interactive 廃止） */
 }
-#stampCanvas.interactive { pointer-events: auto; }
 
 /* ==================== 制御ボタン（シャッター／スタンプ） ==================== */
 .control-button {

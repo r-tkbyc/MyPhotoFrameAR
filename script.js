@@ -213,42 +213,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function addStampFromURL(url) {
-    if (!fcanvas) return;
-    const cssW = fcanvas.getWidth();
-    const cssH = fcanvas.getHeight();
+  if (!fcanvas) return;
+  const cssW = fcanvas.getWidth();
+  const cssH = fcanvas.getHeight();
 
-    fabric.Image.fromURL(url, (img) => {
-      img.set({
-        originX: 'center',
-        originY: 'center',
-        left: cssW / 2,
-        top:  cssH / 2,
-        selectable: true,
-        transparentCorners: false,
-        cornerColor: '#ff5b82',
-        cornerStyle: 'circle',
-        borderColor: '#ff5b82',
-        cornerSize: 14
-      });
-      const base = Math.min(cssW, cssH) * 0.3; // 初期サイズ：短辺の30%
-      const scale = base / img.width;
-      img.scale(scale);
+  fabric.Image.fromURL(url, (img) => {
+    img.set({
+      originX: 'center',
+      originY: 'center',
+      left: cssW / 2,
+      top:  cssH / 2,
+      selectable: true,
+      transparentCorners: false,
+      cornerColor: '#ff5b82',
+      cornerStyle: 'circle',
+      borderColor: '#ff5b82',
+      cornerSize: 14
+    });
+    const base = Math.min(cssW, cssH) * 0.3;
+    const scale = base / img.width;
+    img.scale(scale);
 
-      fcanvas.add(img);
-      fcanvas.setActiveObject(img);
-      fcanvas.renderAll();
-    }, { crossOrigin: 'anonymous' });
-  }
+    fcanvas.add(img);
+    fcanvas.bringToFront(img);      // ← 前面に
+    fcanvas.setActiveObject(img);   // ← 選択状態に
+    fcanvas.renderAll();
+
+    // 追加直後にシートを閉じて、即編集できる状態にする
+    closeStampSheet();               // ← これを追加
+  }, { crossOrigin: 'anonymous' });
+}
 
   function openStampSheet() {
     stampSheet.classList.add('open');
     isSheetOpen = true;
-    stampCanvasEl.classList.add('interactive'); // 編集中はタッチ拾う
   }
   function closeStampSheet() {
     stampSheet.classList.remove('open');
     isSheetOpen = false;
-    stampCanvasEl.classList.remove('interactive');
   }
 
   stampButton?.addEventListener('click', () => {
