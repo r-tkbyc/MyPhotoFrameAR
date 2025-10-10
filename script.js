@@ -213,36 +213,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function addStampFromURL(url) {
-  if (!fcanvas) return;
-  const cssW = fcanvas.getWidth();
-  const cssH = fcanvas.getHeight();
+    if (!fcanvas) return;
+    const cssW = fcanvas.getWidth();
+    const cssH = fcanvas.getHeight();
 
-  fabric.Image.fromURL(url, (img) => {
-    img.set({
-      originX: 'center',
-      originY: 'center',
-      left: cssW / 2,
-      top:  cssH / 2,
-      selectable: true,
-      transparentCorners: false,
-      cornerColor: '#ff5b82',
-      cornerStyle: 'circle',
-      borderColor: '#ff5b82',
-      cornerSize: 14
-    });
-    const base = Math.min(cssW, cssH) * 0.3;
-    const scale = base / img.width;
-    img.scale(scale);
+    fabric.Image.fromURL(url, (img) => {
+      img.set({
+        originX: 'center',
+        originY: 'center',
+        selectable: true,
+        transparentCorners: false,
+        cornerColor: '#ff5b82',
+        cornerStyle: 'circle',
+        borderColor: '#ff5b82',
+        cornerSize: 14
+      });
 
-    fcanvas.add(img);
-    fcanvas.bringToFront(img);      // ← 前面に
-    fcanvas.setActiveObject(img);   // ← 選択状態に
-    fcanvas.renderAll();
+      // 初期スケール：短辺の30%
+      const base = Math.min(cssW, cssH) * 0.3;
+      const scale = base / img.width;
+      img.scale(scale);
 
-    // 追加直後にシートを閉じて、即編集できる状態にする
-    closeStampSheet();               // ← これを追加
-  }, { crossOrigin: 'anonymous' });
-}
+      // ど真ん中に正確に配置（ズームや座標系の影響を受けにくい方法）
+      const centerPoint = new fabric.Point(cssW / 2, cssH / 2);
+      img.setPositionByOrigin(centerPoint, 'center', 'center');
+
+      fcanvas.add(img);
+      fcanvas.bringToFront(img);      // 前面へ
+      fcanvas.setActiveObject(img);   // 選択状態
+      fcanvas.requestRenderAll();     // 描画要求（renderAll よりも推奨）
+
+      closeStampSheet();              // すぐ編集できるようシートを閉じる
+    }, { crossOrigin: 'anonymous' });
+  }
 
   function openStampSheet() {
     stampSheet.classList.add('open');

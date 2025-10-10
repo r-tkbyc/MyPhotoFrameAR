@@ -49,7 +49,7 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 5;              /* camera(1) < photo(2) < stamp(5) < frame(6) */
+  z-index: 7;              /* camera(1) < photo(2) < stamp(5) < frame(6) */
   pointer-events: auto;    /* ← 常に操作可能にする（.interactive 廃止） */
 }
 
