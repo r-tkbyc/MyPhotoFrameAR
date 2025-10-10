@@ -66,7 +66,7 @@ body {
 
 /* シャッターボタン（画像のみ・比率ベース） */
 #shutterButton {
-  width: clamp(14vmin, 18vmin, 22vmin);  /* ← 最小/理想/最大を“比率”だけで指定（px不使用） */
+  width: clamp(16vmin, 22vmin, 24vmin);  /* ← 最小/理想/最大を“比率”だけで指定（px不使用） */
   aspect-ratio: 1 / 1;
   height: auto;
   border-radius: 50%;
