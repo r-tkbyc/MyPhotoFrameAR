@@ -189,6 +189,68 @@ document.addEventListener('DOMContentLoaded', async () => {
       preserveObjectStacking: true
     });
     resizeStampCanvas();
+
+    // 端末ジェスチャをキャンバスに渡す／操作性UP
+    stampCanvasEl.style.pointerEvents = 'auto';
+    stampCanvasEl.style.touchAction = 'none';
+    fcanvas.upperCanvasEl.style.touchAction = 'none';
+    fcanvas.defaultCursor = 'grab';
+    fcanvas.allowTouchScrolling = false;
+
+    // 当たり判定・ハンドル（指で掴みやすく）
+    fcanvas.targetFindTolerance = 12;
+    fabric.Object.prototype.transparentCorners = false;
+    fabric.Object.prototype.cornerStyle = 'circle';
+    fabric.Object.prototype.cornerColor = '#ff5b82';
+    fabric.Object.prototype.borderColor = '#ff5b82';
+    fabric.Object.prototype.cornerSize = 26;
+    fabric.Object.prototype.rotatingPointOffset = 40;
+
+    // ===== 2本指ジェスチャ（拡大/回転） =====
+    let gObj = null, gStart = null;
+    const getDist = (a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+    const getAngle=(a,b)=>Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX);
+
+    fcanvas.upperCanvasEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const obj = fcanvas.getActiveObject();
+        if (!obj) return;
+        gObj = obj;
+        gStart = {
+          dist: getDist(e.touches[0], e.touches[1]),
+          angle: getAngle(e.touches[0], e.touches[1]),
+          scaleX: obj.scaleX || obj.scale || 1,
+          angleDeg: obj.angle || 0
+        };
+        e.preventDefault();
+      }
+    }, { passive:false });
+
+    fcanvas.upperCanvasEl.addEventListener('touchmove', (e) => {
+      if (gObj && e.touches.length === 2) {
+        const dist = getDist(e.touches[0], e.touches[1]);
+        const ang  = getAngle(e.touches[0], e.touches[1]);
+
+        const s = dist / gStart.dist;
+        const newScale = Math.max(0.1, Math.min(5, gStart.scaleX * s));
+        gObj.scale(newScale);
+
+        const deltaDeg = (ang - gStart.angle) * (180/Math.PI);
+        gObj.rotate(gStart.angleDeg + deltaDeg);
+
+        gObj.setCoords();
+        fcanvas.requestRenderAll();
+        e.preventDefault();
+      }
+    }, { passive:false });
+
+    fcanvas.upperCanvasEl.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2 && gObj) {
+        gObj = null;
+        gStart = null;
+        e.preventDefault();
+      }
+    }, { passive:false });
   }
 
   function resizeStampCanvas() {
@@ -214,19 +276,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function addStampFromURL(url) {
     if (!fcanvas) return;
-    const cssW = fcanvas.getWidth();
-    const cssH = fcanvas.getHeight();
 
     fabric.Image.fromURL(url, (img) => {
       img.set({
         originX: 'center',
         originY: 'center',
         selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        lockScalingFlip: true,
         transparentCorners: false,
         cornerColor: '#ff5b82',
         cornerStyle: 'circle',
         borderColor: '#ff5b82',
-        cornerSize: 14
+        cornerSize: 26
       });
 
       // 初期スケール：短辺の30%
@@ -238,16 +301,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       fcanvas.add(img);
 
-      // ★ ズームやDPRを考慮して「見た目の中央」に配置
+      // 画面の“見た目の中央”へ
       fcanvas.viewportCenterObject(img);
       img.setCoords();
 
-      // 前面 & 選択状態
+      // 前面＆選択
       fcanvas.bringToFront(img);
       fcanvas.setActiveObject(img);
       fcanvas.requestRenderAll();
 
-      // シートは自動で閉じる（そのまま編集しやすく）
+      // 追加後はシートを閉じて即編集できるように
       closeStampSheet();
     }, { crossOrigin: 'anonymous' });
   }
@@ -273,7 +336,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const src = btn.getAttribute('data-src');
     if (src) {
       addStampFromURL(src);
-      // closeStampSheet(); // 自動で閉じたければ有効化
     }
   });
 
