@@ -190,21 +190,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     resizeStampCanvas();
 
-    // 端末ジェスチャをキャンバスに渡す／操作性UP
+    // ここから ↓ 追加（ラッパ/上キャンバスに z-index とタッチ設定を明示）
+    const container = fcanvas.getElement().parentNode; // .canvas-container
+    if (container) {
+      container.style.position  = 'absolute';
+      container.style.inset     = '0';
+      container.style.width     = '100%';
+      container.style.height    = '100%';
+      container.style.zIndex    = '7';      // フレーム(6)より前
+    }
+    // 上キャンバスに直接も設定（ブラウザ差の保険）
+    fcanvas.upperCanvasEl.style.touchAction  = 'none';
+    fcanvas.upperCanvasEl.style.pointerEvents = 'auto';
+    fcanvas.upperCanvasEl.style.zIndex       = '7';
+    // ↓ 操作性UP（あなたの最終にも近い設定）
     stampCanvasEl.style.pointerEvents = 'auto';
-    stampCanvasEl.style.touchAction = 'none';
-    fcanvas.upperCanvasEl.style.touchAction = 'none';
-    fcanvas.defaultCursor = 'grab';
-    fcanvas.allowTouchScrolling = false;
-
-    // 当たり判定・ハンドル（指で掴みやすく）
-    fcanvas.targetFindTolerance = 12;
-    fabric.Object.prototype.transparentCorners = false;
+    stampCanvasEl.style.touchAction   = 'none';
+    fcanvas.defaultCursor             = 'grab';
+    fcanvas.allowTouchScrolling       = false;
+    fcanvas.targetFindTolerance       = 12;
+    fabric.Object.prototype.cornerSize = 26;
     fabric.Object.prototype.cornerStyle = 'circle';
     fabric.Object.prototype.cornerColor = '#ff5b82';
     fabric.Object.prototype.borderColor = '#ff5b82';
-    fabric.Object.prototype.cornerSize = 26;
-    fabric.Object.prototype.rotatingPointOffset = 40;
+    fabric.Object.prototype.transparentCorners = false;
 
     // ===== 2本指ジェスチャ（拡大/回転） =====
     let gObj = null, gStart = null;

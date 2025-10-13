@@ -54,6 +54,21 @@ body {
   touch-action:none;
 }
 
+/* Fabric が生成するラッパ（ここに z-index を与える） */
+.canvas-container {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 7 !important;        /* フレーム(6)より前に */
+}
+
+/* 実際にイベントを受ける上キャンバス（念のため） */
+.canvas-container .upper-canvas {
+  touch-action: none;           /* ピンチ等をCanvasに渡す */
+  pointer-events: auto;         /* タッチを受ける */
+}
+
 /* ==================== 制御ボタン（シャッター／スタンプ） ==================== */
 .control-button {
   position: absolute;
