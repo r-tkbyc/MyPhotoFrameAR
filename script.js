@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fcanvas) fcanvas.calcOffset();
   });
 
-  // =================== シャッター（スタンプ合成を追加） ===================
+  // =================== シャッター（合成順：カメラ → フレーム → スタンプ） ===================
   shutterButton.addEventListener('click', async () => {
     if (!stream || !cameraFeed.srcObject) return;
 
@@ -396,9 +396,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1) カメラ画像
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
-    canvasContext.drawImage(cameraFeed, sx, sy, sWidth, sHeight, 0, 0, photoCanvas.width, photoCanvas.height);
+    canvasContext.drawImage(
+      cameraFeed,
+      sx, sy, sWidth, sHeight,
+      0, 0, photoCanvas.width, photoCanvas.height
+    );
 
-    // 1.5) スタンプ（Fabricキャンバス）を合成
+    // 2) フレーム（先に合成）
+    await ensureFramesReady();
+    drawFramesToCanvas();
+
+    // 3) スタンプ（最後に合成＝最前面に見える）
     if (fcanvas) {
       canvasContext.drawImage(
         stampCanvasEl,
@@ -407,11 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
     }
 
-    // 2) フレーム（ロード完了を保証 → 合成）
-    await ensureFramesReady();
-    drawFramesToCanvas();
-
-    // 3) ストリーム停止 → ビュー切替 → プレビュー
+    // ストリーム停止 → ビュー切替 → プレビュー
     stream.getTracks().forEach(t => t.stop());
     cameraFeed.srcObject = null;
     setCameraView(false);
