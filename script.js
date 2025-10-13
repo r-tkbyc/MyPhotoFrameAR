@@ -230,20 +230,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       // 初期スケール：短辺の30%
+      const cssW = fcanvas.getWidth();
+      const cssH = fcanvas.getHeight();
       const base = Math.min(cssW, cssH) * 0.3;
       const scale = base / img.width;
       img.scale(scale);
 
-      // ど真ん中に正確に配置（ズームや座標系の影響を受けにくい方法）
-      const centerPoint = new fabric.Point(cssW / 2, cssH / 2);
-      img.setPositionByOrigin(centerPoint, 'center', 'center');
-
       fcanvas.add(img);
-      fcanvas.bringToFront(img);      // 前面へ
-      fcanvas.setActiveObject(img);   // 選択状態
-      fcanvas.requestRenderAll();     // 描画要求（renderAll よりも推奨）
 
-      closeStampSheet();              // すぐ編集できるようシートを閉じる
+      // ★ ズームやDPRを考慮して「見た目の中央」に配置
+      fcanvas.viewportCenterObject(img);
+      img.setCoords();
+
+      // 前面 & 選択状態
+      fcanvas.bringToFront(img);
+      fcanvas.setActiveObject(img);
+      fcanvas.requestRenderAll();
+
+      // シートは自動で閉じる（そのまま編集しやすく）
+      closeStampSheet();
     }, { crossOrigin: 'anonymous' });
   }
 
