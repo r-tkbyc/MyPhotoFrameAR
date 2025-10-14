@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="versionInfo">v1.5.2</div>
+  <div id="versionInfo">v1.5.3</div>
 
   <div class="container">
     <!-- カメラ映像 -->
@@ -69,6 +69,14 @@
         <button class="stamp-thumb" data-src="./Assets/stamp_p.png"><img src="./Assets/stamp_p.png" alt=""></button>
         <button class="stamp-thumb" data-src="./Assets/stamp_hand.png"><img src="./Assets/stamp_hand.png" alt=""></button>
       </div>
+    </div>
+
+    <!-- ▼ スタンプ長押し用：フリックアクションダイヤル -->
+    <div id="stampActionDial" class="hidden" aria-hidden="true">
+      <button data-action="delete"      class="dial-btn dial-right">削除</button>
+      <button data-action="front"       class="dial-btn dial-up">前面へ</button>
+      <button data-action="back"        class="dial-btn dial-down">背面へ</button>
+      <button data-action="lock-toggle" class="dial-btn dial-left">ロック</button>
     </div>
   </div>
 

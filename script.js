@@ -26,7 +26,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampSheet    = document.getElementById('stampSheet');
   const sheetCloseBtn = document.getElementById('sheetCloseBtn');
 
-  let fcanvas = null;   // Fabric.Canvas
+  // 長押しフリック用ダイヤル（存在しなくても動作するようにnull許容）
+  const actionDial = document.getElementById('stampActionDial');
+  const LONGPRESS_MS = 450;
+  const FLICK_THRESHOLD = 50;
+
+  let fcanvas = null;      // Fabric.Canvas
   let isSheetOpen = false;
 
   let stream = null;
@@ -35,6 +40,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // プレビュー画像の一時データ
   let lastCaptureBlob = null;
   let lastCaptureObjectURL = null;
+
+  // ===== 長押し・フリック用ワーク変数 =====
+  let lpTimer = null;
+  let lpStartPoint = null;  // {x, y} (client座標)
+  let lpTarget = null;      // fabric.Object
+  let dialOpen = false;
 
   // カメラ表示/撮影結果の切替
   const setCameraView = (isCameraActive) => {
@@ -200,10 +211,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.zIndex    = '7';      // フレーム(6)より前
     }
     // 上キャンバスに直接も設定（ブラウザ差の保険）
-    fcanvas.upperCanvasEl.style.touchAction  = 'none';
+    fcanvas.upperCanvasEl.style.touchAction   = 'none';
     fcanvas.upperCanvasEl.style.pointerEvents = 'auto';
-    fcanvas.upperCanvasEl.style.zIndex       = '7';
-    // ↓ 操作性UP（あなたの最終にも近い設定）
+    fcanvas.upperCanvasEl.style.zIndex        = '7';
+    // ↓ 操作性UP設定
     stampCanvasEl.style.pointerEvents = 'auto';
     stampCanvasEl.style.touchAction   = 'none';
     fcanvas.defaultCursor             = 'grab';
@@ -260,6 +271,148 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
       }
     }, { passive:false });
+
+    // ====== 長押しフリック・ダイヤル（存在する場合のみ有効化） ======
+    if (actionDial) {
+      const upper = fcanvas.upperCanvasEl;
+
+      const showActionDial = (x, y, target) => {
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        const localX = x - containerRect.left;
+        const localY = y - containerRect.top;
+
+        actionDial.style.left = `${localX}px`;
+        actionDial.style.top  = `${localY}px`;
+        actionDial.classList.remove('hidden');
+        actionDial.setAttribute('aria-hidden', 'false');
+        dialOpen = true;
+
+        const lockBtn = actionDial.querySelector('[data-action="lock-toggle"]');
+        if (lockBtn) {
+          const locked = !!target._locked;
+          lockBtn.textContent = locked ? 'ロック解除' : 'ロック';
+        }
+      };
+
+      const hideActionDial = () => {
+        if (!dialOpen) return;
+        actionDial.classList.add('hidden');
+        actionDial.setAttribute('aria-hidden', 'true');
+        dialOpen = false;
+      };
+
+      const doStampAction = (action, target) => {
+        if (!target || !fcanvas) return;
+        switch (action) {
+          case 'delete':
+            fcanvas.remove(target);
+            break;
+          case 'front':
+            fcanvas.bringToFront(target);
+            break;
+          case 'back':
+            fcanvas.sendToBack(target);
+            break;
+          case 'lock-toggle':
+            if (target._locked) {
+              target.lockMovementX = target.lockMovementY = false;
+              target.lockScalingX = target.lockScalingY = false;
+              target.lockRotation = false;
+              target.hasControls = true;
+              target._locked = false;
+              target.opacity = 1;
+            } else {
+              target.lockMovementX = target.lockMovementY = true;
+              target.lockScalingX = target.lockScalingY = true;
+              target.lockRotation = true;
+              target.hasControls = false;
+              target._locked = true;
+              target.opacity = 0.95;
+            }
+            break;
+        }
+        target.setCoords?.();
+        fcanvas.requestRenderAll();
+      };
+
+      upper.addEventListener('touchstart', (e) => {
+        // 2本指ジェスチャやシートオープン中はスキップ
+        if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
+
+        // その位置のターゲットを拾う
+        const target = fcanvas.findTarget(e, true) || fcanvas.getActiveObject();
+        if (!target) { clearTimeout(lpTimer); return; }
+
+        lpTarget = target;
+        lpStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        clearTimeout(lpTimer);
+        lpTimer = setTimeout(() => {
+          // 長押し成立
+          fcanvas.setActiveObject(lpTarget);
+          fcanvas.requestRenderAll();
+          showActionDial(lpStartPoint.x, lpStartPoint.y, lpTarget);
+          lpTimer = null;
+        }, LONGPRESS_MS);
+      }, { passive: true });
+
+      upper.addEventListener('touchmove', (e) => {
+        // 長押し判定中に大きく動いたらキャンセル（通常ドラッグとして扱う）
+        if (lpTimer && e.touches.length === 1 && lpStartPoint) {
+          const dx = e.touches[0].clientX - lpStartPoint.x;
+          const dy = e.touches[0].clientY - lpStartPoint.y;
+          if (Math.hypot(dx, dy) > 10) {
+            clearTimeout(lpTimer);
+            lpTimer = null;
+          }
+        }
+      }, { passive: true });
+
+      upper.addEventListener('touchend', (e) => {
+        // タイマーが残っていれば長押し不成立（通常タップ/ドラッグ）
+        if (lpTimer) {
+          clearTimeout(lpTimer);
+          lpTimer = null;
+          lpStartPoint = null;
+          lpTarget = null;
+          return;
+        }
+
+        // ダイヤルが開いている＝フリック判定 or ボタンタップ
+        if (dialOpen && lpStartPoint && lpTarget) {
+          const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+          if (t) {
+            const dx = t.clientX - lpStartPoint.x;
+            const dy = t.clientY - lpStartPoint.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist >= FLICK_THRESHOLD) {
+              let action = null;
+              if (Math.abs(dx) > Math.abs(dy)) {
+                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック
+              } else {
+                action = dy < 0 ? 'front' : 'back';         // ↑前面へ / ↓背面へ
+              }
+              doStampAction(action, lpTarget);
+            }
+          }
+          hideActionDial();
+          lpStartPoint = null;
+          lpTarget = null;
+        }
+      }, { passive: true });
+
+      // ダイヤルのボタン（タップ）
+      actionDial.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.dial-btn');
+        if (!btn || !lpTarget) return;
+        const action = btn.getAttribute('data-action');
+        doStampAction(action, lpTarget);
+        // 後片付け
+        hideActionDial();
+        lpStartPoint = null;
+        lpTarget = null;
+      });
+    }
   }
 
   function resizeStampCanvas() {
@@ -325,6 +478,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openStampSheet() {
+    // シート表示中はダイヤルを隠す（被り防止）
+    if (actionDial && dialOpen) {
+      actionDial.classList.add('hidden');
+      actionDial.setAttribute('aria-hidden', 'true');
+      dialOpen = false;
+    }
     stampSheet.classList.add('open');
     isSheetOpen = true;
   }
@@ -343,9 +502,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btn = ev.target.closest('.stamp-thumb');
     if (!btn) return;
     const src = btn.getAttribute('data-src');
-    if (src) {
-      addStampFromURL(src);
-    }
+    if (src) addStampFromURL(src);
   });
 
   window.addEventListener('resize', () => {
