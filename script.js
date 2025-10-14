@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // フレーム
   const frameTopEl    = document.getElementById('frameTop');
   const frameBottomEl = document.getElementById('frameBottom');
-  const FRAME_SCALE = 0.65; // CSSと一致
 
   // スタンプ（Fabric）
   const stampCanvasEl = document.getElementById('stampCanvas');
