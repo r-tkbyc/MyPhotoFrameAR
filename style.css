@@ -41,16 +41,20 @@ body {
 #cameraFeed { z-index: 1; }
 #photoCanvas { z-index: 2; background: #000; }
 
-/* ==================== フレーム（カメラ上・スタンプ下） ==================== */
-#frameTop, #frameBottom {
-  position: absolute; left: 50%;
-  transform: translateX(-50%) scale(0.65);
-  width: auto; height: auto;
-  pointer-events: none; z-index: 6;
+/* ==================== フレーム（カメラ上・スタンプ下 幅100%フィット） ==================== */
+#frameTop,
+#frameBottom {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%); /* 中央寄せ */
+  width: 100%;                 /* 画面幅いっぱい */
+  height: auto;                /* 縦は比率維持 */
+  pointer-events: none;
+  z-index: 6;
   transform-origin: center center;
 }
-#frameTop    { top: 0;    transform-origin: center top; }
-#frameBottom { bottom: 0;  transform-origin: center bottom; }
+#frameTop { top: 0; transform-origin: center top; 
+#frameBottom { bottom: 0; transform-origin: center bottom; }
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
 #stampCanvas {

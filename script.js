@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
   }
 
-  // ---- フレーム合成（表示と一致）
+  // ---- フレーム合成（表示と一致）幅100%フィット
   function drawFramesToCanvas() {
     const cw = photoCanvas.width;
     const ch = photoCanvas.height;
@@ -145,10 +145,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const iw = imgEl.naturalWidth;
       const ih = imgEl.naturalHeight;
       if (!iw || !ih) return;
-      const drawW = Math.round(iw * FRAME_SCALE);
-      const drawH = Math.round(ih * FRAME_SCALE);
-      const dx = Math.round((cw - drawW) / 2);
-      const dy = (place === 'top') ? 0 : (ch - drawH);
+
+      // キャンバス幅にフィット（等比）
+      const scale = cw / iw;
+      const drawW = cw;                     // 幅100%
+      const drawH = Math.round(ih * scale); // 高さは比率で
+      const dx = 0;                         // 幅いっぱいなので0
+      const dy = (place === 'top') ? 0 : (ch - drawH); // 上端 or 下端に揃える
+
       ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
 
