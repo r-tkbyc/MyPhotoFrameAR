@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampCanvasEl = document.getElementById('stampCanvas');
   const stampButton   = document.getElementById('stampButton');
   const stampSheet    = document.getElementById('stampSheet');
-  const sheetCloseBtn = document.getElementById('sheetCloseBtn');
   const sheetCloseX  = document.getElementById('sheetCloseX');
 
   // 長押しフリック用ダイヤル
@@ -591,7 +590,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!fcanvas) initFabricCanvas();
     if (isSheetOpen) closeStampSheet(); else openStampSheet();
   });
-  sheetCloseBtn?.addEventListener('click', closeStampSheet);
   sheetCloseX?.addEventListener('click', closeStampSheet);
 
   document.addEventListener('click', (ev) => {

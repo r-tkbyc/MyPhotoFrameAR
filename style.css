@@ -174,11 +174,6 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   color: #fff; font-weight: 600; margin: 0 4px 10px;
 }
-.sheet-close {                           /* 下部の「閉じる」ボタン */
-  position: absolute; right: 12px; bottom: 10px;
-  height: 36px; padding: 0 14px; border-radius: 999px; border: none;
-  background: #a1a1aa; color: #fff;
-}
 
 /* 右上 × ボタン（大きめ & タップ領域拡大） */
 .sheet-close-x{
@@ -190,7 +185,7 @@ body {
 
 /* タブバー */
 .sheet-tabs {
-  display: flex; gap: 8px; padding: 0 12px 10px;
+  display: flex; gap: 15px; padding: 0 12px 10px;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
 /* タブ：非アクティブ＝黒背景・黒枠（罫線は目立たない） */
