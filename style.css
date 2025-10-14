@@ -438,3 +438,56 @@ body {
   background: #a1a1aa;
   color: #fff;
 }
+
+/* 右上 × ボタン（プレビューの×と同テイスト） */
+.sheet-close-x{
+  position:absolute;
+  top:8px;
+  right:10px;
+  border:none;
+  background:transparent;
+  font-size:28px;
+  line-height:1;
+  color:#666;
+  cursor:pointer;
+  z-index:1; /* タブより前に出す */
+}
+
+/* タブ色：これまでの色（アクティブは濃いグレー×白文字）＋白い縁取り */
+.tab-btn{
+  flex:0 0 auto;
+  height:36px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid #e5e7eb;   /* 通常時は薄い枠 */
+  background:#fff;
+  font-size:14px;
+  color:#374151;
+}
+.tab-btn.active{
+  background:#111827;         /* これまでのアクティブ色 */
+  color:#fff;
+  border-color:#ffffff;       /* ★ 白縁 */
+  box-shadow:0 0 0 1px #ffffff inset; /* 細めの白縁を確実に見せる */
+}
+
+/* サムネイル：背景を“透過”に戻す */
+.stamp-panel.active{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+.stamp-thumb{
+  display:block;
+  width:100%;
+  aspect-ratio:1/1;
+  border:none;                /* ★ 枠なし */
+  background:transparent;     /* ★ 背景透過 */
+  padding:6px;                /* 余白は好みで */
+}
+.stamp-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:transparent;     /* 念のため */
+}

@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampButton   = document.getElementById('stampButton');
   const stampSheet    = document.getElementById('stampSheet');
   const sheetCloseBtn = document.getElementById('sheetCloseBtn');
+  const sheetCloseX  = document.getElementById('sheetCloseX');
 
   // 長押しフリック用ダイヤル
   const actionDial = document.getElementById('stampActionDial');
@@ -589,6 +590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (isSheetOpen) closeStampSheet(); else openStampSheet();
   });
   sheetCloseBtn?.addEventListener('click', closeStampSheet);
+  sheetCloseX?.addEventListener('click', closeStampSheet);
 
   document.addEventListener('click', (ev) => {
     const btn = ev.target.closest('.stamp-thumb');
