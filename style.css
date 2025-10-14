@@ -202,7 +202,7 @@ body {
 /* アクティブ：黒背景に白縁 */
 .tab-btn.active {
   background: #111827; color: #fff;
-  border-color: #fff; box-shadow: 0 0 0 2px #fff inset;
+  border-color: #fff; box-shadow: 0 0 0 1px #fff inset;
 }
 
 /* パネル領域 */
