@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Active camera resolution =', settings.width, 'x', settings.height);
 
       setCameraView(true);
-      permissionMessage.textContent = 'カメラの使用が許可されました。';
+      permissionMessage.textContent = 'IM制作<br>B\'zライブツアー<br>WebARコンテンツ';
 
       // 初回に Fabric 初期化
       initFabricCanvas();
