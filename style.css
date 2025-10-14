@@ -53,7 +53,7 @@ body {
   z-index: 6;
   transform-origin: center center;
 }
-#frameTop { top: 0; transform-origin: center top; 
+#frameTop { top: 0; transform-origin: center top; }
 #frameBottom { bottom: 0; transform-origin: center bottom; }
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
