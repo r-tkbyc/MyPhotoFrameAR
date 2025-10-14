@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampSheet    = document.getElementById('stampSheet');
   const sheetCloseBtn = document.getElementById('sheetCloseBtn');
 
-  // 長押しフリック用ダイヤル（存在しなくても動作するようにnull許容）
+  // 長押しフリック用ダイヤル（null許容）
   const actionDial = document.getElementById('stampActionDial');
   const LONGPRESS_MS = 450;
   const FLICK_THRESHOLD = 50;
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // =================== Fabric.js：スタンプ ===================
 
-  // ==== ダイヤル表示中はオブジェクトを一時ロックして動かないように ====
+  // ---- ダイヤル表示中の一時ロック
   function freezeTargetForDial(target){
     if (!target) return;
     target.__preLock = {
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     target.setCoords && target.setCoords();
   }
   function unfreezeTargetAfterDial(target){
-    if (!target || target._locked) return; // ロック指定されたら維持
+    if (!target || target._locked) return; // “本ロック”が指定されたら維持
     const p = target.__preLock;
     if (!p) return;
     target.lockMovementX = p.mvx; target.lockMovementY = p.mvy;
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     target.__preLock = null;
     target.setCoords && target.setCoords();
   }
-  
+
   function initFabricCanvas() {
     if (fcanvas) { resizeStampCanvas(); return; }
 
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     resizeStampCanvas();
 
-    // ここから ↓ 追加（ラッパ/上キャンバスに z-index とタッチ設定を明示）
+    // ラッパ/上キャンバスに z-index とタッチ設定を明示
     const container = fcanvas.getElement().parentNode; // .canvas-container
     if (container) {
       container.style.position  = 'absolute';
@@ -236,11 +236,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.height    = '100%';
       container.style.zIndex    = '7';      // フレーム(6)より前
     }
-    // 上キャンバスに直接も設定（ブラウザ差の保険）
     fcanvas.upperCanvasEl.style.touchAction   = 'none';
     fcanvas.upperCanvasEl.style.pointerEvents = 'auto';
     fcanvas.upperCanvasEl.style.zIndex        = '7';
-    // ↓ 操作性UP設定
     stampCanvasEl.style.pointerEvents = 'auto';
     stampCanvasEl.style.touchAction   = 'none';
     fcanvas.defaultCursor             = 'grab';
@@ -375,49 +373,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         fcanvas.requestRenderAll();
       };
 
-      upper.addEventListener('touchend', (e) => {
-        if (lpTimer) { // 長押し不成立
-          clearTimeout(lpTimer);
+      // ★★ 長押し用 touchstart（抜けていた箇所を追加）★★
+      upper.addEventListener('touchstart', (e) => {
+        // ピンチやシート表示中はスキップ
+        if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
+
+        // その位置のターゲットを拾う
+        const target = fcanvas.findTarget(e, true) || fcanvas.getActiveObject();
+        if (!target) { clearTimeout(lpTimer); return; }
+
+        lpTarget = target;
+        lpStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        clearTimeout(lpTimer);
+        lpTimer = setTimeout(() => {
+          // 長押し成立：アクティブ化してダイヤル表示
+          fcanvas.setActiveObject(lpTarget);
+          fcanvas.requestRenderAll();
+          showActionDial(lpStartPoint.x, lpStartPoint.y, lpTarget);
           lpTimer = null;
-          lpStartPoint = null;
-          lpTarget = null;
-          return;
-        }
-        if (dialOpen && lpStartPoint && lpTarget) {
-          const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-          if (t) {
-            const dx = t.clientX - lpStartPoint.x;
-            const dy = t.clientY - lpStartPoint.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist >= FLICK_THRESHOLD) {
-              let action = null;
-              if (Math.abs(dx) > Math.abs(dy)) {
-                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック
-              } else {
-                action = dy < 0 ? 'front' : 'back';         // ↑前面へ / ↓背面へ
-              }
-              // アクション実行
-              doStampAction(action, lpTarget);
-            }
-          }
-          hideActionDial();             // ← 必ず先に閉じる（解除処理込み）
-          lpStartPoint = null;
-          lpTarget = null;
-        }
+        }, LONGPRESS_MS);
       }, { passive: true });
 
-      actionDial.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('.dial-btn');
-        if (!btn || !lpTarget) return;
-        const action = btn.getAttribute('data-action');
-        doStampAction(action, lpTarget);
-        hideActionDial();               // ← 必ず閉じて解除
-        lpStartPoint = null;
-        lpTarget = null;
-      });
-
+      // 長押し判定中の移動キャンセル
       upper.addEventListener('touchmove', (e) => {
-        // 長押し判定中に大きく動いたらキャンセル（通常ドラッグとして扱う）
         if (lpTimer && e.touches.length === 1 && lpStartPoint) {
           const dx = e.touches[0].clientX - lpStartPoint.x;
           const dy = e.touches[0].clientY - lpStartPoint.y;
@@ -428,6 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }, { passive: true });
 
+      // フリック判定 & 後片付け（単一の touchend に集約）
       upper.addEventListener('touchend', (e) => {
         // タイマーが残っていれば長押し不成立（通常タップ/ドラッグ）
         if (lpTimer) {
@@ -456,7 +435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               doStampAction(action, lpTarget);
             }
           }
-          hideActionDial();
+          hideActionDial();             // 必ず閉じる（解除処理込み）
           lpStartPoint = null;
           lpTarget = null;
         }
@@ -468,8 +447,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!btn || !lpTarget) return;
         const action = btn.getAttribute('data-action');
         doStampAction(action, lpTarget);
-        // 後片付け
-        hideActionDial();
+        hideActionDial();               // 閉じて解除
         lpStartPoint = null;
         lpTarget = null;
       });
