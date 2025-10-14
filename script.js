@@ -91,7 +91,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Active camera resolution =', settings.width, 'x', settings.height);
 
       setCameraView(true);
-      permissionMessage.textContent = 'IM制作<br>B\'zライブツアー<br>WebARコンテンツ';
+      permissionMessage.style.textAlign = 'center';
+      permissionMessage.innerHTML = [
+        'IM課 モックアップ制作',
+        "B'zライブツアー",
+        'WebARコンテンツ'
+      ].join('<br>');
 
       // 初回に Fabric 初期化
       initFabricCanvas();
