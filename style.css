@@ -168,7 +168,7 @@ body {
 .sheet-grip,
 #stampSheet .sheet-handle {              /* 古い命名との互換も維持 */
   width: 44px; height: 5px; border-radius: 999px;
-  background: #d1d5db; margin: 10px auto 8px;
+  background: #d1d5db; margin: 10px auto 15px;
 }
 #stampSheet .sheet-header {              /* （互換）未使用でも影響なし */
   display: flex; align-items: center; justify-content: space-between;
