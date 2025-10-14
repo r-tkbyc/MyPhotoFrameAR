@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampSheet    = document.getElementById('stampSheet');
   const sheetCloseBtn = document.getElementById('sheetCloseBtn');
 
-  // 長押しフリック用ダイヤル（null許容）
+  // 長押しフリック用ダイヤル
   const actionDial = document.getElementById('stampActionDial');
   const LONGPRESS_MS = 450;
   const FLICK_THRESHOLD = 50;
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const localX = x - containerRect.left;
         const localY = y - containerRect.top;
 
-        // まず対象を一時ロック（フリック中に動かないように）
+        // 対象を一時ロック（フリック中に動かないように）
         freezeTargetForDial(target);
 
         // Canvas 側もターゲット探索を止めて誤ドラッグを防ぐ
@@ -353,19 +353,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             break;
           case 'lock-toggle':
             if (target._locked) {
+              // --- ロック解除 ---
               target.lockMovementX = target.lockMovementY = false;
-              target.lockScalingX = target.lockScalingY = false;
-              target.lockRotation = false;
-              target.hasControls = true;
-              target._locked = false;
-              target.opacity = 1;
+              target.lockScalingX  = target.lockScalingY  = false;
+              target.lockRotation  = false;
+              target.hasControls   = true;
+              target.selectable    = true;
+              target.evented       = true;
+              target._locked       = false;
+              target.opacity       = 1;
+
+              // ★ 重要：仮ロックの復元を無効化
+              target.__preLock = null;
             } else {
+              // --- ロック ---
               target.lockMovementX = target.lockMovementY = true;
-              target.lockScalingX = target.lockScalingY = true;
-              target.lockRotation = true;
-              target.hasControls = false;
-              target._locked = true;
-              target.opacity = 0.95;
+              target.lockScalingX  = target.lockScalingY  = true;
+              target.lockRotation  = true;
+              target.hasControls   = false;
+              // 選択は可能なままでもOK（編集不可）
+              target.selectable    = true;
+              target.evented       = true;
+              target._locked       = true;
+              target.opacity       = 0.95;
             }
             break;
         }
@@ -373,7 +383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fcanvas.requestRenderAll();
       };
 
-      // ★★ 長押し用 touchstart（抜けていた箇所を追加）★★
+      // 長押し開始
       upper.addEventListener('touchstart', (e) => {
         // ピンチやシート表示中はスキップ
         if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
@@ -394,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, LONGPRESS_MS);
       }, { passive: true });
 
-      // 長押し判定中の移動キャンセル
+      // 長押し判定中に大きく動いたらキャンセル
       upper.addEventListener('touchmove', (e) => {
         if (lpTimer && e.touches.length === 1 && lpStartPoint) {
           const dx = e.touches[0].clientX - lpStartPoint.x;
@@ -406,7 +416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }, { passive: true });
 
-      // フリック判定 & 後片付け（単一の touchend に集約）
+      // フリック判定 & 後片付け
       upper.addEventListener('touchend', (e) => {
         // タイマーが残っていれば長押し不成立（通常タップ/ドラッグ）
         if (lpTimer) {
@@ -417,7 +427,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
-        // ダイヤルが開いている＝フリック判定 or ボタンタップ
         if (dialOpen && lpStartPoint && lpTarget) {
           const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
           if (t) {
@@ -428,14 +437,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (dist >= FLICK_THRESHOLD) {
               let action = null;
               if (Math.abs(dx) > Math.abs(dy)) {
-                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック
+                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック(解除)
               } else {
                 action = dy < 0 ? 'front' : 'back';         // ↑前面へ / ↓背面へ
               }
               doStampAction(action, lpTarget);
             }
           }
-          hideActionDial();             // 必ず閉じる（解除処理込み）
+          hideActionDial(); // 仮ロック解除もここで実行
           lpStartPoint = null;
           lpTarget = null;
         }
@@ -447,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!btn || !lpTarget) return;
         const action = btn.getAttribute('data-action');
         doStampAction(action, lpTarget);
-        hideActionDial();               // 閉じて解除
+        hideActionDial();
         lpStartPoint = null;
         lpTarget = null;
       });
