@@ -540,6 +540,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     isSheetOpen = false;
   }
 
+  // ===== タブ切り替え =====
+  let currentStampTab = 'stamp1'; // デフォルト
+
+  function activateStampTab(tabName) {
+    currentStampTab = tabName;
+
+    // タブボタンの状態
+    document.querySelectorAll('#stampTabs .tab-btn').forEach(btn => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      // タブ→パネル関連ARIA
+      const panelId = 'panel-' + btn.dataset.tab;
+      btn.setAttribute('aria-controls', panelId);
+      btn.id = 'tab-' + btn.dataset.tab;
+    });
+
+    // パネルの表示切替
+    document.querySelectorAll('.stamp-panel').forEach(panel => {
+      const isActive = panel.dataset.tab === tabName;
+      panel.classList.toggle('active', isActive);
+      panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      if (isActive) {
+        panel.id = 'panel-' + tabName;
+        panel.setAttribute('aria-labelledby', 'tab-' + tabName);
+      }
+    });
+  }
+
+  // タブボタンのクリック
+  document.getElementById('stampTabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    const tabName = btn.dataset.tab;
+    if (tabName) activateStampTab(tabName);
+  });
+
+  // シートを開いたときは前回のタブを保持（初回は 'stamp1'）
+  const _openStampSheetOrig = openStampSheet;
+  openStampSheet = function() {
+    _openStampSheetOrig();
+    activateStampTab(currentStampTab || 'stamp1');
+  };
+
   stampButton?.addEventListener('click', () => {
     if (!fcanvas) initFabricCanvas();
     if (isSheetOpen) closeStampSheet(); else openStampSheet();

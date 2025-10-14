@@ -354,3 +354,87 @@ body {
   object-fit: contain;
 }
 
+/* ===== スタンプシート（レイアウトは既存を継承） ===== */
+.stamp-sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  transform: translateY(100%);
+  transition: transform .28s ease;
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(6px);
+  z-index: 9;                 /* フレーム(6)やFabric(7)より前 */
+  height: 56vh;               /* ご希望の「画面の半分近く」 */
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+.stamp-sheet.open { transform: translateY(0); }
+
+.sheet-grip {
+  width: 44px; height: 5px; border-radius: 999px;
+  background: #d1d5db;
+  margin: 10px auto 8px;
+}
+
+/* タブバー */
+.sheet-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+  flex: 0 0 auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 14px;
+  color: #374151;
+}
+.tab-btn.active {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+/* パネル */
+.sheet-body {
+  height: calc(56vh - 5px - 8px - 36px - 10px - 16px); /* 全高 - grip - margin - tab高 - 余白 */
+  padding: 8px 12px 12px;
+  overflow: auto;
+}
+.stamp-panel { display: none; }
+.stamp-panel.active { 
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+/* サムネイル */
+.stamp-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px;
+}
+.stamp-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.sheet-close {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: none;
+  background: #a1a1aa;
+  color: #fff;
+}

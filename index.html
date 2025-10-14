@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="versionInfo">v1.5.6</div>
+  <div id="versionInfo">v1.5.7</div>
 
   <div class="container">
     <!-- カメラ映像 -->
@@ -55,20 +55,57 @@
     <img id="frameBottom" src="./Assets/frame_moon_bottm.png" alt="">
 
     <!-- ▼ 下から出る半透明のスタンプ選択シート -->
-    <div id="stampSheet" aria-hidden="true">
-      <div class="sheet-handle"></div>
-      <div class="sheet-header">
-        <span>Stamp</span>
-        <button id="sheetCloseBtn" class="sheet-close" aria-label="閉じる">×</button>
+    <div id="stampSheet" class="stamp-sheet" aria-modal="true" role="dialog">
+      <div class="sheet-grip" aria-hidden="true"></div>
+
+      <!-- タブ見出し -->
+      <div class="sheet-tabs" id="stampTabs" role="tablist" aria-label="スタンプカテゴリ">
+        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-stamp1" id="tab-stamp1" data-tab="stamp1">Stamp1</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-stamp2" id="tab-stamp2" data-tab="stamp2">Stamp2</button>
+        <!-- 例: タブを増やす場合は↓をコピペ
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-stamp3" id="tab-stamp3" data-tab="stamp3">Stamp3</button>
+        -->
       </div>
-      <div class="stamp-grid">
-        <!-- サムネ（必要に応じて追加／差し替え） -->
-        <button class="stamp-thumb" data-src="./Assets/stamp_f.png"><img src="./Assets/stamp_f.png" alt=""></button>
-        <button class="stamp-thumb" data-src="./Assets/stamp_y.png"><img src="./Assets/stamp_y.png" alt=""></button>
-        <button class="stamp-thumb" data-src="./Assets/stamp_o.png"><img src="./Assets/stamp_o.png" alt=""></button>
-        <button class="stamp-thumb" data-src="./Assets/stamp_p.png"><img src="./Assets/stamp_p.png" alt=""></button>
-        <button class="stamp-thumb" data-src="./Assets/stamp_hand.png"><img src="./Assets/stamp_hand.png" alt=""></button>
+
+      <!-- タブの中身 -->
+      <div class="sheet-body">
+        <!-- Stamp1 パネル -->
+        <div class="stamp-panel active" role="tabpanel" id="panel-stamp1" aria-labelledby="tab-stamp1" data-tab="stamp1">
+          <!-- ここに Stamp1 グループのスタンプサムネイルを置く -->
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_f.png" aria-label="Stamp1-01">
+            <img src="./Assets/stamps/stamp_f.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_y.png" aria-label="Stamp1-02">
+            <img src="./Assets/stamps/stamp_y.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_o.png" aria-label="Stamp1-03">
+            <img src="./Assets/stamps/stamp_o.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_p.png" aria-label="Stamp1-04">
+            <img src="./Assets/stamps/stamp_p.png" alt="">
+          </button>
+          <!-- 必要なだけ追加 -->
+        </div>
+
+        <!-- Stamp2 パネル -->
+        <div class="stamp-panel" role="tabpanel" id="panel-stamp2" aria-labelledby="tab-stamp2" data-tab="stamp2">
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_logo.png" aria-label="Stamp2-01">
+            <img src="./Assets/stamps/stamp_logo.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp_hand.png" aria-label="Stamp2-02">
+            <img src="./Assets/stamps/stamp_hand.png" alt="">
+          </button>
+          <!-- 必要なだけ追加 -->
+        </div>
+
+        <!-- 例: パネルを増やす場合は↓をコピペして data-tab / id / aria を揃える
+        <div class="stamp-panel" role="tabpanel" id="panel-stamp3" aria-labelledby="tab-stamp3" data-tab="stamp3">
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp3_01.png"><img src="./Assets/stamps/stamp3_01.png" alt=""></button>
+        </div>
+        -->
       </div>
+
+      <button id="sheetCloseBtn" class="sheet-close" aria-label="閉じる">閉じる</button>
     </div>
 
     <!-- ▼ スタンプ長押し用：フリックアクションダイヤル -->
