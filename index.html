@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="versionInfo">v1.5.9</div>
+  <div id="versionInfo">v1.6.0</div>
 
   <div class="container">
     <!-- カメラ映像 -->
@@ -57,6 +57,9 @@
     <!-- ▼ 下から出る半透明のスタンプ選択シート -->
     <div id="stampSheet" class="stamp-sheet" aria-modal="true" role="dialog">
       <div class="sheet-grip" aria-hidden="true"></div>
+
+      <!-- ★ 右上の × ボタンを追加 -->
+      <button id="sheetCloseX" class="sheet-close-x" aria-label="閉じる">×</button>
 
       <!-- タブ見出し -->
       <div class="sheet-tabs" id="stampTabs" role="tablist" aria-label="スタンプカテゴリ">

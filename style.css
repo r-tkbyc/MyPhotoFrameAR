@@ -393,11 +393,13 @@ body {
   font-size: 14px;
   color: #374151;
 }
+/* 旧: アクティブ（上書きされます）
 .tab-btn.active {
   background: #111827;
   color: #fff;
   border-color: #111827;
 }
+*/
 
 /* パネル */
 .sheet-body {
@@ -412,7 +414,7 @@ body {
   gap: 10px;
 }
 
-/* サムネイル */
+/* サムネイル（初期定義：後で透過に上書き） */
 .stamp-thumb {
   display: block;
   width: 100%;
@@ -450,7 +452,7 @@ body {
   line-height:1;
   color:#666;
   cursor:pointer;
-  z-index:1; /* タブより前に出す */
+  z-index:100; /* ★ タブより確実に前面へ */
 }
 
 /* タブ色：これまでの色（アクティブは濃いグレー×白文字）＋白い縁取り */
@@ -465,13 +467,13 @@ body {
   color:#374151;
 }
 .tab-btn.active{
-  background:#111827;         /* これまでのアクティブ色 */
+  background:#111827;         /* アクティブ色 */
   color:#fff;
   border-color:#ffffff;       /* ★ 白縁 */
   box-shadow:0 0 0 1px #ffffff inset; /* 細めの白縁を確実に見せる */
 }
 
-/* サムネイル：背景を“透過”に戻す */
+/* サムネイル：背景を“透過”に戻す（最終上書き） */
 .stamp-panel.active{
   display:grid;
   grid-template-columns:repeat(4,1fr);
