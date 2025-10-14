@@ -446,13 +446,23 @@ body {
   position:absolute;
   top:8px;
   right:10px;
+  /* 見た目を大きく */
+  font-size:36px;          /* ← 以前: 28px */
+  font-weight:700;
+  line-height:1;
+
+  /* タップしやすい領域に（見た目はそのまま） */
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
   border:none;
   background:transparent;
-  font-size:28px;
-  line-height:1;
-  color:#666;
+  color:#fff;              /* 半透明シート上で視認性UP */
   cursor:pointer;
-  z-index:100; /* ★ タブより確実に前面へ */
+  z-index:100;             /* タブより確実に前面へ */
 }
 
 /* タブ色：これまでの色（アクティブは濃いグレー×白文字）＋白い縁取り */
@@ -461,10 +471,10 @@ body {
   height:36px;
   padding:0 14px;
   border-radius:999px;
-  border:1px solid #e5e7eb;   /* 通常時は薄い枠 */
-  background:#fff;
+  border:1px solid #111827;  /* ディアクティブは黒罫線＝実質見えない */
+  background:#111827;        /* 黒 */
+  color:#fff;                /* 文字は白で固定 */
   font-size:14px;
-  color:#374151;
 }
 .tab-btn.active{
   background:#111827;         /* アクティブ色 */
