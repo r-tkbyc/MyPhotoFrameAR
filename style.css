@@ -156,7 +156,7 @@ body {
   position: absolute; left: 0; right: 0; bottom: 0;
   transform: translateY(100%); transition: transform .28s ease;
   height: var(--sheet-height); min-height: var(--sheet-height); max-height: var(--sheet-height);
-  background: rgba(255,255,255,.95);    /* 現行の見た目を維持 */
+  background: rgba(0, 0, 0, 0.55);    /* 現行の見た目を維持 */
   backdrop-filter: blur(6px);
   border-top-left-radius: 14px; border-top-right-radius: 14px;
   z-index: 20;                          /* ボタン(10)より前面 */
