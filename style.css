@@ -303,28 +303,31 @@ body {
 /* ===== スタンプ長押しフリック用ダイヤル ===== */
 #stampActionDial {
   position: absolute;
-  width: 0; height: 0;            /* 原点だけ持つアンカー */
-  z-index: 20;                    /* シート(9)やフレーム(6)より前 */
-  pointer-events: none;           /* 自身はイベントを拾わない（子のみ） */
-}
-#stampActionDial .dial-btn {
-  position: absolute;
-  min-width: 64px; height: 40px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: none;
-  background: rgba(0,0,0,.75);
-  color: #fff;
-  font-size: 14px;
-  pointer-events: auto;           /* ボタンはタップ可能 */
-  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  width: 0; height: 0;                 /* 原点だけ持つアンカー */
+  z-index: 20;                          /* シート(9)やフレーム(6)より前 */
+  pointer-events: none;                 /* 自身はイベントを拾わない（子のみ） */
 }
 
-/* ボタンの配置（原点から放射状） */
-#stampActionDial .dial-right { left:  52px; top: -20px; }   /* → 削除 */
-#stampActionDial .dial-left  { right: 52px; top: -20px; }   /* ← ロック */
-#stampActionDial .dial-up    { left: -32px; bottom: 52px; } /* ↑ 前面へ */
-#stampActionDial .dial-down  { left: -32px; top: 52px; }    /* ↓ 背面へ */
+#stampActionDial .dial-btn {
+  position: absolute;
+  min-width: 96px;                      /* ↑ 大きく */
+  height: 56px;                         /* ↑ 大きく */
+  padding: 0 14px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(0,0,0,.82);
+  color: #fff;
+  font-size: 16px;                      /* ↑ 大きく */
+  font-weight: 600;
+  pointer-events: auto;                 /* ボタンはタップ可能 */
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+
+/* ボタンの配置（原点から放射状、距離も少し広げる） */
+#stampActionDial .dial-right { left:  72px; top:  -28px; }  /* → 削除 */
+#stampActionDial .dial-left  { right: 72px; top:  -28px; }  /* ← ロック */
+#stampActionDial .dial-up    { left:  -48px; bottom: 72px; }/* ↑ 前面へ */
+#stampActionDial .dial-down  { left:  -48px; top:    72px; }/* ↓ 背面へ */
 
 /* サムネグリッド（中スクロール） */
 .stamp-grid{

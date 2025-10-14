@@ -192,6 +192,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // =================== Fabric.js：スタンプ ===================
+
+  // ==== ダイヤル表示中はオブジェクトを一時ロックして動かないように ====
+  function freezeTargetForDial(target){
+    if (!target) return;
+    target.__preLock = {
+      mvx: target.lockMovementX, mvy: target.lockMovementY,
+      sx: target.lockScalingX, sy: target.lockScalingY,
+      rot: target.lockRotation, hc: target.hasControls
+    };
+    target.lockMovementX = target.lockMovementY = true;
+    target.lockScalingX  = target.lockScalingY  = true;
+    target.lockRotation  = true;
+    target.hasControls   = false;
+    target.setCoords && target.setCoords();
+  }
+  function unfreezeTargetAfterDial(target){
+    if (!target || target._locked) return; // ロック指定されたら維持
+    const p = target.__preLock;
+    if (!p) return;
+    target.lockMovementX = p.mvx; target.lockMovementY = p.mvy;
+    target.lockScalingX  = p.sx;  target.lockScalingY  = p.sy;
+    target.lockRotation  = p.rot; target.hasControls   = p.hc;
+    target.__preLock = null;
+    target.setCoords && target.setCoords();
+  }
+  
   function initFabricCanvas() {
     if (fcanvas) { resizeStampCanvas(); return; }
 
@@ -281,6 +307,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const localX = x - containerRect.left;
         const localY = y - containerRect.top;
 
+        // まず対象を一時ロック（フリック中に動かないように）
+        freezeTargetForDial(target);
+
+        // Canvas 側もターゲット探索を止めて誤ドラッグを防ぐ
+        fcanvas.skipTargetFind = true;
+        fcanvas.selection = false;
+
         actionDial.style.left = `${localX}px`;
         actionDial.style.top  = `${localY}px`;
         actionDial.classList.remove('hidden');
@@ -299,6 +332,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         actionDial.classList.add('hidden');
         actionDial.setAttribute('aria-hidden', 'true');
         dialOpen = false;
+
+        // Canvas 側設定を元に戻す
+        fcanvas.skipTargetFind = false;
+        fcanvas.selection = true;
+
+        // 対象の一時ロックを解除（本ロックは維持）
+        if (lpTarget) unfreezeTargetAfterDial(lpTarget);
       };
 
       const doStampAction = (action, target) => {
@@ -335,25 +375,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         fcanvas.requestRenderAll();
       };
 
-      upper.addEventListener('touchstart', (e) => {
-        // 2本指ジェスチャやシートオープン中はスキップ
-        if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
-
-        // その位置のターゲットを拾う
-        const target = fcanvas.findTarget(e, true) || fcanvas.getActiveObject();
-        if (!target) { clearTimeout(lpTimer); return; }
-
-        lpTarget = target;
-        lpStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        clearTimeout(lpTimer);
-        lpTimer = setTimeout(() => {
-          // 長押し成立
-          fcanvas.setActiveObject(lpTarget);
-          fcanvas.requestRenderAll();
-          showActionDial(lpStartPoint.x, lpStartPoint.y, lpTarget);
+      upper.addEventListener('touchend', (e) => {
+        if (lpTimer) { // 長押し不成立
+          clearTimeout(lpTimer);
           lpTimer = null;
-        }, LONGPRESS_MS);
+          lpStartPoint = null;
+          lpTarget = null;
+          return;
+        }
+        if (dialOpen && lpStartPoint && lpTarget) {
+          const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+          if (t) {
+            const dx = t.clientX - lpStartPoint.x;
+            const dy = t.clientY - lpStartPoint.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist >= FLICK_THRESHOLD) {
+              let action = null;
+              if (Math.abs(dx) > Math.abs(dy)) {
+                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック
+              } else {
+                action = dy < 0 ? 'front' : 'back';         // ↑前面へ / ↓背面へ
+              }
+              // アクション実行
+              doStampAction(action, lpTarget);
+            }
+          }
+          hideActionDial();             // ← 必ず先に閉じる（解除処理込み）
+          lpStartPoint = null;
+          lpTarget = null;
+        }
       }, { passive: true });
+
+      actionDial.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.dial-btn');
+        if (!btn || !lpTarget) return;
+        const action = btn.getAttribute('data-action');
+        doStampAction(action, lpTarget);
+        hideActionDial();               // ← 必ず閉じて解除
+        lpStartPoint = null;
+        lpTarget = null;
+      });
 
       upper.addEventListener('touchmove', (e) => {
         // 長押し判定中に大きく動いたらキャンセル（通常ドラッグとして扱う）
