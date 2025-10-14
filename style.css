@@ -503,3 +503,15 @@ body {
   object-fit:contain;
   background:transparent;     /* 念のため */
 }
+
+/* シートを前面に（必ずボタンより大きい値に） */
+#stampSheet,
+.stamp-sheet {
+  z-index: 20; /* ← 9 から引き上げ */
+}
+
+/* シートが開いている間はボタンを触れないようにする（保険） */
+.container.sheet-open #shutterButton,
+.container.sheet-open #stampButton {
+  pointer-events: none;
+}

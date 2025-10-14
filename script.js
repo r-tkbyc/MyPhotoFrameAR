@@ -535,10 +535,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     stampSheet.classList.add('open');
     isSheetOpen = true;
+    document.querySelector('.container')?.classList.add('sheet-open');
   }
   function closeStampSheet() {
     stampSheet.classList.remove('open');
     isSheetOpen = false;
+    document.querySelector('.container')?.classList.remove('sheet-open');
   }
 
   // ===== タブ切り替え =====
