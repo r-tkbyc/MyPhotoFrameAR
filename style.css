@@ -61,7 +61,7 @@ body {
   transform-origin: center top;
 }
 #frameBottom {
-  bottom: env(safe-area-inset-bottom, 50px);
+  bottom: env(safe-area-inset-bottom, 100px);
   transform-origin: center bottom;
 }
 
