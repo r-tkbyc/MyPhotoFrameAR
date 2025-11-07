@@ -54,7 +54,7 @@ body {
   transform-origin: center center;
 }
 #frameTop { top: 0; transform-origin: center top; }
-#frameBottom { bottom: 10vh; transform-origin: center bottom; }
+#frameBottom { bottom: 5vh; transform-origin: center bottom; }
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
 #stampCanvas {
