@@ -18,7 +18,11 @@ body {
 /* ==================== レイアウト土台 ==================== */
 .container {
   position: relative;
-  width: 100%; max-width: 600px; height: 100vh;
+  width: 100%;
+  max-width: 600px;
+  height: 100vh;
+  height: 100dvh; /* 後勝ちで対応ブラウザは100dvhを採用 */
+  padding-bottom: env(safe-area-inset-bottom, 0px); /* ← 下だけ安全域を足す */
   display: block; background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
@@ -49,12 +53,19 @@ body {
   transform: translateX(-50%); /* 中央寄せ */
   width: 100%;                 /* 画面幅いっぱい */
   height: auto;                /* 縦は比率維持 */
+  display: block;              /* 画像の行ボックスによるズレ防止 */
   pointer-events: none;
   z-index: 6;
   transform-origin: center center;
 }
-#frameTop { top: 0; transform-origin: center top; }
-#frameBottom { bottom: 0; transform-origin: center bottom; }
+#frameTop {
+  top: 0;
+  transform-origin: center top;
+}
+#frameBottom {
+  bottom: 0;
+  transform-origin: center bottom;
+}
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
 #stampCanvas {
