@@ -19,7 +19,6 @@ body {
 .container {
   position: relative;
   width: 100%; max-width: 600px; height: 100dvh;
-  padding-bottom: env(safe-area-inset-bottom, 5vh); /* ← 下だけ安全域を足す */
   display: block; background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
