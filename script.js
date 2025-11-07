@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       cameraFeed.classList.remove('hidden');
       photoCanvas.classList.add('hidden');
       shutterButton.classList.remove('hidden');
+      // ★ カメラビューに戻る際もフレームを調整
+      adjustFramePositions();
     } else {
       cameraFeed.classList.add('hidden');
       photoCanvas.classList.remove('hidden');
@@ -100,6 +102,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 初回に Fabric 初期化
       initFabricCanvas();
+
+      // ★ カメラ起動後にフレームの位置を調整
+      adjustFramePositions();
+
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
       if (err.name === 'NotAllowedError') {
@@ -163,6 +169,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawOne(frameTopEl, 'top');
     drawOne(frameBottomEl, 'bottom');
   }
+
+  // ★ 新規追加: 撮影中のフレーム位置を調整する関数
+  function adjustFramePositions() {
+    // cameraFeed の表示サイズ（CSSが適用された後の実サイズ）を取得
+    const videoRect = cameraFeed.getBoundingClientRect();
+    const containerRect = document.querySelector('.container').getBoundingClientRect();
+
+    const videoDisplayedWidth = videoRect.width;
+    const videoDisplayedHeight = videoRect.height;
+
+    // フレームが video と同じアスペクト比で表示されるように調整
+    // ここでは単純に video の幅いっぱいにフレームを広げる
+    // フレーム自体の width: 100% と height: auto で対応できるはずなので、
+    // ここでは直接位置を設定する
+    frameTopEl.style.width    = `${videoDisplayedWidth}px`;
+    frameBottomEl.style.width = `${videoDisplayedWidth}px`;
+
+    // フレームの画像をロードしてから位置を計算
+    Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]).then(() => {
+        // frameTopEl, frameBottomEl は naturalWidth, naturalHeight を持つ
+        // video の表示領域に合わせてフレームを配置
+        // CSSで既に width: 100% と top: 0 / bottom: 0 が設定されているため、
+        // ここでは left プロパティのみ調整する。
+        // （CSSの left:0; right:0; は親要素の端を基準にするため）
+        frameTopEl.style.left = `${videoRect.left - containerRect.left}px`;
+        frameBottomEl.style.left = `${videoRect.left - containerRect.left}px`;
+    }).catch(error => {
+        console.error("Failed to load frame images:", error);
+    });
+  }
+
 
   // ---- プレビューをモーダルに表示
   function openPreviewModalWithCanvas(canvas) {
@@ -610,6 +647,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('resize', () => {
     resizeStampCanvas();
     if (fcanvas) fcanvas.calcOffset();
+    // ★ リサイズ時にもフレームの位置を調整
+    adjustFramePositions();
   });
 
   // =================== シャッター（合成順：カメラ → フレーム → スタンプ） ===================
@@ -617,17 +656,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!stream || !cameraFeed.srcObject) return;
 
     // キャンバスの出力サイズは可視の video と一致
-    const cw = cameraFeed.clientWidth;
-    const ch = cameraFeed.clientHeight;
+    // ★ cameraFeed.clientWidth/Height が 0 になる場合があるため、container のサイズを使うのが確実
+    const containerRect = document.querySelector('.container').getBoundingClientRect();
+    const cw = Math.max(1, Math.round(containerRect.width));
+    const ch = Math.max(1, Math.round(containerRect.height));
 
-    if (!cw || !ch) {
-      const rect = document.querySelector('.container').getBoundingClientRect();
-      photoCanvas.width  = Math.max(1, Math.round(rect.width));
-      photoCanvas.height = Math.max(1, Math.round(rect.height));
-    } else {
-      photoCanvas.width  = cw;
-      photoCanvas.height = ch;
-    }
+    photoCanvas.width  = cw;
+    photoCanvas.height = ch;
 
     const vw = cameraFeed.videoWidth;
     const vh = cameraFeed.videoHeight;

@@ -15,15 +15,6 @@ body {
 .modal-open { overflow: hidden; }
 .hidden { display: none !important; }
 
-/* ==================== レイアウト土台 ==================== */
-.container {
-  position: relative;
-  width: 100%; max-width: 600px; height: 100vh;
-  display: block; background: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
 /* 右上のバージョン表示 */
 #versionInfo {
   position: fixed; top: 10px; left: 10px; z-index: 1001;
@@ -45,16 +36,27 @@ body {
 #frameTop,
 #frameBottom {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%); /* 中央寄せ */
+  left: 0; /* 中央寄せではなく、左右にぴったり */
+  right: 0;
   width: 100%;                 /* 画面幅いっぱい */
   height: auto;                /* 縦は比率維持 */
   pointer-events: none;
   z-index: 6;
+  /* transform: translateX(-50%); /* 中央寄せは不要 */
   transform-origin: center center;
 }
 #frameTop { top: 0; transform-origin: center top; }
 #frameBottom { bottom: 0; transform-origin: center bottom; }
+
+/* ==================== レイアウト土台 ==================== */
+/* container の高さと overflow を確実に適用 */
+.container {
+  position: relative;
+  width: 100%; max-width: 600px; height: 100vh; /* height: 100vh を明示 */
+  display: block; background: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  overflow: hidden; /* これが重要 */
+}
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
 #stampCanvas {
