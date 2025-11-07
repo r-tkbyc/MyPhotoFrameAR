@@ -18,7 +18,9 @@ body {
 /* ==================== レイアウト土台 ==================== */
 .container {
   position: relative;
-  width: 100%; max-width: 600px; height: 100vh;
+  width: 100%; max-width: 600px; height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   display: block; background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
@@ -45,20 +47,24 @@ body {
 #frameTop,
 #frameBottom {
   position: absolute;
+  display: block;
   left: 50%;
-  transform: translateX(-50%); /* 中央寄せ */
-  width: 100%;                 /* 画面幅いっぱい */
-  height: auto;                /* 縦は比率維持 */
+  transform: translateX(-50%);      /* 中央寄せ */
+  width: 100%;
+  height: auto;
   pointer-events: none;
   z-index: 6;
-  transform-origin: center center;
+  transform-origin: center center;   /* 個別で上/下に上書き */
+  image-rendering: auto;             /* 任意 */
+  /* -webkit-transform: translateX(-50%);  ← 古いiOS対応が必要なら残す */
+  /* -webkit-font-smoothing: antialiased;  ← 画像には不要 */
 }
 #frameTop {
-  top: 0;
+  top: calc(0px + env(safe-area-inset-top, 0px));
   transform-origin: center top;
 }
 #frameBottom {
-  bottom: 0;
+  bottom: calc(0px + env(safe-area-inset-bottom, 0px));
   transform-origin: center bottom;
 }
 
