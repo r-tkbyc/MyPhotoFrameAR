@@ -18,7 +18,7 @@ body {
 /* ==================== レイアウト土台 ==================== */
 .container {
   position: relative;
-  width: 100%; max-width: 600px; height: 100vh;
+  width: 100%; max-width: 600px; height: 100dvh;
   display: block; background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
@@ -53,8 +53,14 @@ body {
   z-index: 6;
   transform-origin: center center;
 }
-#frameTop { top: 0; transform-origin: center top; }
-#frameBottom { bottom: 0; transform-origin: center bottom; }
+#frameTop {
+  top: env(safe-area-inset-top, 0px);
+  transform-origin: center top;
+}
+#frameBottom {
+  bottom: env(safe-area-inset-bottom, 0px);
+  transform-origin: center bottom;
+}
 
 /* ==================== スタンプ用キャンバス（Fabric） ==================== */
 #stampCanvas {
