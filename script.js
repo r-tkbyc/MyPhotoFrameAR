@@ -104,7 +104,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       initFabricCanvas();
 
       // ★ カメラ起動後にフレームの位置を調整
-      adjustFramePositions();
+      // video の readyState が HAVE_ENOUGH_DATA 以上になってから呼び出す
+      // cameraFeed.onloadedmetadata イベントを使うのが確実
+      cameraFeed.onloadedmetadata = () => {
+        adjustFramePositions();
+      };
 
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
@@ -172,29 +176,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ★ 新規追加: 撮影中のフレーム位置を調整する関数
   function adjustFramePositions() {
-    // cameraFeed の表示サイズ（CSSが適用された後の実サイズ）を取得
-    const videoRect = cameraFeed.getBoundingClientRect();
+    // container 要素の境界箱を取得
     const containerRect = document.querySelector('.container').getBoundingClientRect();
 
-    const videoDisplayedWidth = videoRect.width;
-    const videoDisplayedHeight = videoRect.height;
+    // cameraFeed の実際の表示サイズと位置を取得
+    // object-fit: cover によって切り取られた後の、画面上での表示領域
+    const videoWidth  = cameraFeed.videoWidth;
+    const videoHeight = cameraFeed.videoHeight;
+    const elementWidth  = cameraFeed.clientWidth;  // CSSで表示されている幅
+    const elementHeight = cameraFeed.clientHeight; // CSSで表示されている高さ
 
-    // フレームが video と同じアスペクト比で表示されるように調整
-    // ここでは単純に video の幅いっぱいにフレームを広げる
-    // フレーム自体の width: 100% と height: auto で対応できるはずなので、
-    // ここでは直接位置を設定する
-    frameTopEl.style.width    = `${videoDisplayedWidth}px`;
-    frameBottomEl.style.width = `${videoDisplayedWidth}px`;
+    let displayedVideoWidth, displayedVideoHeight, offsetX, offsetY;
+
+    const videoAspectRatio  = videoWidth / videoHeight;
+    const elementAspectRatio = elementWidth / elementHeight;
+
+    if (videoAspectRatio > elementAspectRatio) {
+      // 動画が横長の場合、左右が切り取られ、上下は要素にフィット
+      displayedVideoHeight = elementHeight;
+      displayedVideoWidth  = displayedVideoHeight * videoAspectRatio;
+      offsetX = (elementWidth - displayedVideoWidth) / 2;
+      offsetY = 0;
+    } else {
+      // 動画が縦長の場合、上下が切り取られ、左右は要素にフィット
+      displayedVideoWidth  = elementWidth;
+      displayedVideoHeight = displayedVideoWidth / videoAspectRatio;
+      offsetX = 0;
+      offsetY = (elementHeight - displayedVideoHeight) / 2;
+    }
+
+    // `container` に対する相対的な位置を計算
+    const topOffset = cameraFeed.offsetTop + offsetY;
+    const bottomOffset = cameraFeed.offsetTop + offsetY + displayedVideoHeight;
+    const leftOffset = cameraFeed.offsetLeft + offsetX;
+    const rightOffset = cameraFeed.offsetLeft + offsetX + displayedVideoWidth;
 
     // フレームの画像をロードしてから位置を計算
     Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]).then(() => {
-        // frameTopEl, frameBottomEl は naturalWidth, naturalHeight を持つ
-        // video の表示領域に合わせてフレームを配置
-        // CSSで既に width: 100% と top: 0 / bottom: 0 が設定されているため、
-        // ここでは left プロパティのみ調整する。
-        // （CSSの left:0; right:0; は親要素の端を基準にするため）
-        frameTopEl.style.left = `${videoRect.left - containerRect.left}px`;
-        frameBottomEl.style.left = `${videoRect.left - containerRect.left}px`;
+        // top フレームの位置と幅を設定
+        frameTopEl.style.left  = `${leftOffset}px`;
+        frameTopEl.style.width = `${displayedVideoWidth}px`;
+        frameTopEl.style.top   = `${topOffset}px`; // ★ top を動的に設定
+
+        // bottom フレームの位置と幅を設定
+        frameBottomEl.style.left  = `${leftOffset}px`;
+        frameBottomEl.style.width = `${displayedVideoWidth}px`;
+        frameBottomEl.style.top   = `${bottomOffset - frameBottomEl.clientHeight}px`; // ★ bottom ではなく top で指定し、フレーム自体の高さを考慮
+        // clientHeight が正しく取得できるためには、width が設定されている必要がある
+        // また、フレームが container の下端ではなく、動画コンテンツの表示領域の下端にくるように調整
     }).catch(error => {
         console.error("Failed to load frame images:", error);
     });
