@@ -59,9 +59,9 @@ body {
   transform-origin: center top;
 }
 
-/* 下フレームが画面内に収まるように余白を追加 */
+/* ブラウザ下部UIバー + セーフエリアを考慮 */
 #frameBottom {
-  bottom: env(safe-area-inset-bottom, 5vh);
+  bottom: max(env(safe-area-inset-bottom, 0px), 60px);
   transform-origin: center bottom;
 }
 
