@@ -52,8 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       cameraFeed.classList.remove('hidden');
       photoCanvas.classList.add('hidden');
       shutterButton.classList.remove('hidden');
-      // ★ カメラビューに戻る際もフレームを調整
-      adjustFramePositions();
     } else {
       cameraFeed.classList.add('hidden');
       photoCanvas.classList.remove('hidden');
@@ -102,14 +100,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 初回に Fabric 初期化
       initFabricCanvas();
-
-      // ★ カメラ起動後にフレームの位置を調整
-      // video の readyState が HAVE_ENOUGH_DATA 以上になってから呼び出す
-      // cameraFeed.onloadedmetadata イベントを使うのが確実
-      cameraFeed.onloadedmetadata = () => {
-        adjustFramePositions();
-      };
-
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
       if (err.name === 'NotAllowedError') {
@@ -173,62 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawOne(frameTopEl, 'top');
     drawOne(frameBottomEl, 'bottom');
   }
-
-  // ★ 新規追加: 撮影中のフレーム位置を調整する関数
-  function adjustFramePositions() {
-    // container 要素の境界箱を取得
-    const containerRect = document.querySelector('.container').getBoundingClientRect();
-
-    // cameraFeed の実際の表示サイズと位置を取得
-    // object-fit: cover によって切り取られた後の、画面上での表示領域
-    const videoWidth  = cameraFeed.videoWidth;
-    const videoHeight = cameraFeed.videoHeight;
-    const elementWidth  = cameraFeed.clientWidth;  // CSSで表示されている幅
-    const elementHeight = cameraFeed.clientHeight; // CSSで表示されている高さ
-
-    let displayedVideoWidth, displayedVideoHeight, offsetX, offsetY;
-
-    const videoAspectRatio  = videoWidth / videoHeight;
-    const elementAspectRatio = elementWidth / elementHeight;
-
-    if (videoAspectRatio > elementAspectRatio) {
-      // 動画が横長の場合、左右が切り取られ、上下は要素にフィット
-      displayedVideoHeight = elementHeight;
-      displayedVideoWidth  = displayedVideoHeight * videoAspectRatio;
-      offsetX = (elementWidth - displayedVideoWidth) / 2;
-      offsetY = 0;
-    } else {
-      // 動画が縦長の場合、上下が切り取られ、左右は要素にフィット
-      displayedVideoWidth  = elementWidth;
-      displayedVideoHeight = displayedVideoWidth / videoAspectRatio;
-      offsetX = 0;
-      offsetY = (elementHeight - displayedVideoHeight) / 2;
-    }
-
-    // `container` に対する相対的な位置を計算
-    const topOffset = cameraFeed.offsetTop + offsetY;
-    const bottomOffset = cameraFeed.offsetTop + offsetY + displayedVideoHeight;
-    const leftOffset = cameraFeed.offsetLeft + offsetX;
-    const rightOffset = cameraFeed.offsetLeft + offsetX + displayedVideoWidth;
-
-    // フレームの画像をロードしてから位置を計算
-    Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]).then(() => {
-        // top フレームの位置と幅を設定
-        frameTopEl.style.left  = `${leftOffset}px`;
-        frameTopEl.style.width = `${displayedVideoWidth}px`;
-        frameTopEl.style.top   = `${topOffset}px`; // ★ top を動的に設定
-
-        // bottom フレームの位置と幅を設定
-        frameBottomEl.style.left  = `${leftOffset}px`;
-        frameBottomEl.style.width = `${displayedVideoWidth}px`;
-        frameBottomEl.style.top   = `${bottomOffset - frameBottomEl.clientHeight}px`; // ★ bottom ではなく top で指定し、フレーム自体の高さを考慮
-        // clientHeight が正しく取得できるためには、width が設定されている必要がある
-        // また、フレームが container の下端ではなく、動画コンテンツの表示領域の下端にくるように調整
-    }).catch(error => {
-        console.error("Failed to load frame images:", error);
-    });
-  }
-
 
   // ---- プレビューをモーダルに表示
   function openPreviewModalWithCanvas(canvas) {
@@ -676,8 +610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('resize', () => {
     resizeStampCanvas();
     if (fcanvas) fcanvas.calcOffset();
-    // ★ リサイズ時にもフレームの位置を調整
-    adjustFramePositions();
   });
 
   // =================== シャッター（合成順：カメラ → フレーム → スタンプ） ===================
@@ -685,13 +617,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!stream || !cameraFeed.srcObject) return;
 
     // キャンバスの出力サイズは可視の video と一致
-    // ★ cameraFeed.clientWidth/Height が 0 になる場合があるため、container のサイズを使うのが確実
-    const containerRect = document.querySelector('.container').getBoundingClientRect();
-    const cw = Math.max(1, Math.round(containerRect.width));
-    const ch = Math.max(1, Math.round(containerRect.height));
+    const cw = cameraFeed.clientWidth;
+    const ch = cameraFeed.clientHeight;
 
-    photoCanvas.width  = cw;
-    photoCanvas.height = ch;
+    if (!cw || !ch) {
+      const rect = document.querySelector('.container').getBoundingClientRect();
+      photoCanvas.width  = Math.max(1, Math.round(rect.width));
+      photoCanvas.height = Math.max(1, Math.round(rect.height));
+    } else {
+      photoCanvas.width  = cw;
+      photoCanvas.height = ch;
+    }
 
     const vw = cameraFeed.videoWidth;
     const vh = cameraFeed.videoHeight;
