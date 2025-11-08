@@ -61,7 +61,7 @@ body {
 
 /* 下フレームが画面内に収まるように余白を追加 */
 #frameBottom {
-  bottom: env(safe-area-inset-bottom, 40px);
+  bottom: env(safe-area-inset-bottom, 5vh);
   transform-origin: center bottom;
 }
 
