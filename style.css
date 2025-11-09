@@ -114,9 +114,19 @@ body {
   background: transparent; box-shadow: none;
 }
 
+/* カメラ切り替えボタン（シャッターの右） */
+#cameraToggleButton {
+  width: clamp(16vmin, 20vmin, 24vmin);
+  aspect-ratio: 1/1;
+  left: 50%; transform: translateX(calc(-50% + 160%)); /* シャッターボタンの右に配置 */
+  background: transparent; box-shadow: none;
+}
+
+
 /* シートが開いている間はボタンを押せないように（保険） */
 .container.sheet-open #shutterButton,
-.container.sheet-open #stampButton { pointer-events: none; }
+.container.sheet-open #stampButton,
+.container.sheet-open #cameraToggleButton { pointer-events: none; }
 
 /* ==================== 共通モーダル（権限/プレビュー） ==================== */
 .modal {

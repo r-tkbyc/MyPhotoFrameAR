@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stampSheet    = document.getElementById('stampSheet');
   const sheetCloseX  = document.getElementById('sheetCloseX');
 
+  // カメラ切り替えボタン
+  const cameraToggleButton = document.getElementById('cameraToggleButton');
+  let currentFacingMode = 'environment'; // 'environment' (背面) or 'user' (前面)
+
   // 長押しフリック用ダイヤル
   const actionDial = document.getElementById('stampActionDial');
   const LONGPRESS_MS = 450;
@@ -52,21 +56,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       cameraFeed.classList.remove('hidden');
       photoCanvas.classList.add('hidden');
       shutterButton.classList.remove('hidden');
+      cameraToggleButton.classList.remove('hidden'); // カメラボタンも表示
     } else {
       cameraFeed.classList.add('hidden');
-      photoCanvas.classList.remove('hidden');
+      photoCanvas.classList.add('hidden'); // 撮影後は非表示
       shutterButton.classList.add('hidden');
+      cameraToggleButton.classList.add('hidden'); // カメラボタンも非表示
     }
   };
 
   const startCamera = async () => {
     try {
-      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
 
       const constraints = {
         audio: false,
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: { ideal: currentFacingMode }, // ここを切り替え
           width:  { ideal: 4096 },
           height: { ideal: 4096 }
         }
@@ -88,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await cameraFeed.play();
 
       const settings = track.getSettings ? track.getSettings() : {};
-      console.log('Active camera resolution =', settings.width, 'x', settings.height);
+      console.log('Active camera resolution =', settings.width, 'x', settings.height, ', Facing Mode =', currentFacingMode);
 
       setCameraView(true);
       permissionMessage.style.textAlign = 'center';
@@ -99,7 +108,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       ].join('<br>');
 
       // 初回に Fabric 初期化
-      initFabricCanvas();
+      if (!fcanvas) {
+        initFabricCanvas();
+      } else {
+        resizeStampCanvas(); // カメラ再起動時はキャンバスサイズ調整
+      }
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
       if (err.name === 'NotAllowedError') {
@@ -114,9 +127,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // カメラ切り替えボタンのイベントリスナー
+  cameraToggleButton.addEventListener('click', async () => {
+    currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+    await startCamera();
+  });
+
   await startCamera();
 
   if (permissionMessage.textContent || cameraFeed.srcObject) {
+    // 権限メッセージが設定されている場合、またはカメラストリームがまだない場合のみ表示
+    if (!cameraFeed.srcObject && !permissionMessage.textContent) {
+      // ストリームがまだなく、エラーメッセージもなければ、許可待ちの状態
+      permissionMessage.textContent = 'カメラのアクセスを待機しています...';
+    }
     permissionModal.style.display = 'flex';
     document.body.classList.add('modal-open');
   }
@@ -655,11 +679,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1) カメラ画像
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+
+    // インカメラの場合、画像を水平反転させる
+    if (currentFacingMode === 'user') {
+      canvasContext.translate(photoCanvas.width, 0);
+      canvasContext.scale(-1, 1);
+    }
+
     canvasContext.drawImage(
       cameraFeed,
       sx, sy, sWidth, sHeight,
       0, 0, photoCanvas.width, photoCanvas.height
     );
+
+    // 反転状態をリセット
+    canvasContext.setTransform(1, 0, 0, 1, 0, 0);
 
     // 2) フレーム（先に合成）
     await ensureFramesReady();
