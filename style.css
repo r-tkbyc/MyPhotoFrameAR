@@ -8,7 +8,7 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   display: flex; justify-content: center; align-items: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: #f0f2f5;
   overflow: hidden;
 }
@@ -18,8 +18,12 @@ body {
 /* ==================== レイアウト土台 ==================== */
 .container {
   position: relative;
-  width: 100%; max-width: 600px; height: 100dvh;
-  display: block; background: #fff;
+  width: 100%;
+  max-width: 600px;
+  height: calc(100dvh - env(safe-area-inset-bottom, 0px)); /* 画面全体の高さから下部のUIバー領域を引いた高さ */
+  bottom: env(safe-area-inset-bottom, 0px); /* UIバーの上にコンテナ全体を配置 */
+  display: block;
+  background: #fff;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
 }
