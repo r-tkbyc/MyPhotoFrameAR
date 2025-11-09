@@ -720,6 +720,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3) スタンプ（最後に合成＝最前面に見える）
     if (fcanvas) {
+      fcanvas.discardActiveObject(); // 現在アクティブなオブジェクトの選択を解除し、コントロールと枠線を非表示にする
+      fcanvas.renderAll(); // 変更を反映させるために再描画
       canvasContext.drawImage(
         stampCanvasEl,
         0, 0, stampCanvasEl.width, stampCanvasEl.height,
