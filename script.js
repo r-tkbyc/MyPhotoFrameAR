@@ -96,6 +96,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       cameraFeed.srcObject = stream;
       await cameraFeed.play();
 
+      // インカメラの場合、video要素自体を水平反転させる
+      if (currentFacingMode === 'user') {
+        cameraFeed.style.transform = 'scaleX(-1)';
+      } else {
+        cameraFeed.style.transform = 'none'; // 背面カメラの場合は反転を解除
+      }
+
       const settings = track.getSettings ? track.getSettings() : {};
       console.log('Active camera resolution =', settings.width, 'x', settings.height, ', Facing Mode =', currentFacingMode);
 
@@ -680,7 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
     
-    // インカメラの場合、画像を水平反転させる
+    // インカメラの場合、画像を水平反転させる (video要素の表示に合わせてcanvasも反転)
     if (currentFacingMode === 'user') {
       canvasContext.translate(photoCanvas.width, 0);
       canvasContext.scale(-1, 1);
