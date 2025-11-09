@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectable: true,
         hasControls: true,
         hasBorders: true,
-        lockScalingFlip: true,
+        lockScalingFlip: false,
         transparentCorners: false,
         cornerColor: '#ff5b82',
         cornerStyle: 'circle',
