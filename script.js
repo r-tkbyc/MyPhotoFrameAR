@@ -531,15 +531,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         originX: 'center',
         originY: 'center',
         selectable: true,
-        hasControls: true,
-        hasBorders: true,
-        lockUniScaling: true,
+        hasControls: true,      // ★ コントロールは表示
+        hasBorders: true,       // ★ 枠線も表示
+
+        // 四隅での拡大縮小時に縦横比を固定する
+        uniformScaling: true,   // ★ これを true にする
+
         lockScalingFlip: true,
         transparentCorners: false,
         cornerColor: '#ff5b82',
         cornerStyle: 'circle',
         borderColor: '#ff5b82',
         cornerSize: 26
+      });
+
+      // ★ 上下左右のコントロールを非表示にする
+      img.setControlsVisibility({
+        mt: false, // 上中央を非表示
+        mb: false, // 下中央を非表示
+        ml: false, // 左中央を非表示
+        mr: false  // 右中央を非表示
       });
 
       // 初期スケール：短辺の30%
