@@ -1,70 +1,238 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const cameraFeed = document.getElementById('cameraFeed');
-  const photoCanvas = document.getElementById('photoCanvas');
-  const shutterButton = document.getElementById('shutterButton');
+  // ==================== DOM要素の取得 ====================
+  const DOMElements = {
+    cameraFeed: document.getElementById('cameraFeed'),
+    photoCanvas: document.getElementById('photoCanvas'),
+    shutterButton: document.getElementById('shutterButton'),
+    permissionModal: document.getElementById('permissionModal'),
+    permissionMessage: document.getElementById('permissionMessage'),
+    closeModalButton: document.getElementById('closeModalButton'),
+    previewModal: document.getElementById('previewModal'),
+    previewImage: document.getElementById('previewImage'),
+    previewSaveBtn: document.getElementById('previewSaveBtn'),
+    previewShareBtn: document.getElementById('previewShareBtn'),
+    previewCloseBtn: document.getElementById('previewCloseBtn'),
+    previewCloseX: document.getElementById('previewCloseX'),
+    frameTopEl: document.getElementById('frameTop'),
+    frameBottomEl: document.getElementById('frameBottom'),
+    stampCanvasEl: document.getElementById('stampCanvas'),
+    stampButton: document.getElementById('stampButton'),
+    stampSheet: document.getElementById('stampSheet'),
+    sheetCloseX: document.getElementById('sheetCloseX'),
+    cameraToggleButton: document.getElementById('cameraToggleButton'),
+    actionDial: document.getElementById('stampActionDial'),
+    stampTabsContainer: document.getElementById('stampTabs'),
+    container: document.querySelector('.container'),
+    body: document.body
+  };
 
-  const permissionModal = document.getElementById('permissionModal');
-  const permissionMessage = document.getElementById('permissionMessage');
-  const closeModalButton = document.getElementById('closeModalButton');
-
-  // プレビュー用モーダル
-  const previewModal    = document.getElementById('previewModal');
-  const previewImage    = document.getElementById('previewImage');
-  const previewSaveBtn  = document.getElementById('previewSaveBtn');
-  const previewShareBtn = document.getElementById('previewShareBtn');
-  const previewCloseBtn = document.getElementById('previewCloseBtn');
-  const previewCloseX   = document.getElementById('previewCloseX');
-
-  // フレーム
-  const frameTopEl    = document.getElementById('frameTop');
-  const frameBottomEl = document.getElementById('frameBottom');
-
-  // スタンプ（Fabric）
-  const stampCanvasEl = document.getElementById('stampCanvas');
-  const stampButton   = document.getElementById('stampButton');
-  const stampSheet    = document.getElementById('stampSheet');
-  const sheetCloseX  = document.getElementById('sheetCloseX');
-
-  // カメラ切り替えボタン
-  const cameraToggleButton = document.getElementById('cameraToggleButton');
-  let currentFacingMode = 'environment'; // 'environment' (背面) or 'user' (前面)
-
-  // 長押しフリック用ダイヤル
-  const actionDial = document.getElementById('stampActionDial');
+  // ==================== 定数と変数 ====================
   const LONGPRESS_MS = 450;
   const FLICK_THRESHOLD = 50;
+  const CAMERA_SETTINGS = {
+    idealWidth: 4096,
+    idealHeight: 4096,
+    minScale: 0.1,
+    maxScale: 5,
+    initialStampScaleRatio: 0.3, // 短辺に対するスタンプ初期サイズの割合
+  };
+  const FABRIC_OBJECT_SETTINGS = {
+    cornerSize: 26,
+    cornerStyle: 'circle',
+    cornerColor: '#ff5b82',
+    borderColor: '#ff5b82',
+    transparentCorners: false,
+    uniformScaling: true, // 拡大縮小時に縦横比を固定
+    lockScalingFlip: true,
+    hasControls: true,
+    hasBorders: true,
+    selectable: true,
+    evented: true,
+    originX: 'center',
+    originY: 'center',
+  };
 
-  let fcanvas = null;      // Fabric.Canvas
-  let isSheetOpen = false;
-
+  let fcanvas = null;
   let stream = null;
-  const canvasContext = photoCanvas.getContext('2d');
+  let currentFacingMode = 'environment'; // 'environment' (背面) or 'user' (前面)
+  let isSheetOpen = false;
 
   // プレビュー画像の一時データ
   let lastCaptureBlob = null;
   let lastCaptureObjectURL = null;
 
-  // ===== 長押し・フリック用ワーク変数 =====
+  // 長押し・フリック用ワーク変数
   let lpTimer = null;
-  let lpStartPoint = null;  // {x, y} (client座標)
-  let lpTarget = null;      // fabric.Object
+  let lpStartPoint = null; // {x, y} (client座標)
+  let lpTarget = null; // fabric.Object
   let dialOpen = false;
+  let currentStampTab = 'stamp1'; // デフォルトのスタンプタブ
 
-  // カメラ表示/撮影結果の切替
+  const canvasContext = DOMElements.photoCanvas.getContext('2d');
+
+  // ==================== ヘルパー関数 ====================
+
+  /**
+   * 画像要素のロード完了を待機する
+   * @param {HTMLImageElement} el
+   * @returns {Promise<HTMLImageElement|null>}
+   */
+  function waitImage(el) {
+    return new Promise((resolve) => {
+      if (!el) return resolve(null);
+      if (el.complete && el.naturalWidth && el.naturalHeight) return resolve(el);
+      el.addEventListener('load', () => resolve(el), { once: true });
+      el.addEventListener('error', () => {
+        console.error(`Failed to load image: ${el.src}`);
+        resolve(null);
+      }, { once: true });
+    });
+  }
+
+  /**
+   * 2点間の距離を計算する
+   * @param {Touch} a
+   * @param {Touch} b
+   * @returns {number}
+   */
+  const getDistance = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+  /**
+   * 2点間の角度を計算する (ラジアン)
+   * @param {Touch} a
+   * @param {Touch} b
+   * @returns {number}
+   */
+  const getAngle = (a, b) => Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+
+
+  // ==================== UI表示制御 ====================
+
+  /**
+   * カメラビューと撮影結果ビューを切り替える
+   * @param {boolean} isCameraActive - カメラがアクティブかどうか
+   */
   const setCameraView = (isCameraActive) => {
-    if (isCameraActive) {
-      cameraFeed.classList.remove('hidden');
-      photoCanvas.classList.add('hidden');
-      shutterButton.classList.remove('hidden');
-      cameraToggleButton.classList.remove('hidden'); // カメラボタンも表示
-    } else {
-      cameraFeed.classList.add('hidden');
-      photoCanvas.classList.remove('hidden'); // 撮影後は非表示
-      shutterButton.classList.add('hidden');
-      cameraToggleButton.classList.add('hidden'); // カメラボタンも非表示
-    }
+    DOMElements.cameraFeed.classList.toggle('hidden', !isCameraActive);
+    DOMElements.photoCanvas.classList.toggle('hidden', isCameraActive);
+    DOMElements.shutterButton.classList.toggle('hidden', !isCameraActive);
+    DOMElements.cameraToggleButton.classList.toggle('hidden', !isCameraActive);
   };
 
+  /**
+   * 権限モーダルを表示する
+   * @param {string} message - モーダルに表示するメッセージ
+   */
+  const showPermissionModal = (message) => {
+    DOMElements.permissionMessage.textContent = message;
+    DOMElements.permissionModal.style.display = 'flex';
+    DOMElements.body.classList.add('modal-open');
+  };
+
+  /**
+   * 権限モーダルを閉じる
+   */
+  const hidePermissionModal = () => {
+    DOMElements.permissionModal.style.display = 'none';
+    DOMElements.body.classList.remove('modal-open');
+  };
+
+  /**
+   * プレビューモーダルを開く
+   * @param {HTMLCanvasElement} canvas - プレビュー表示するキャンバス
+   */
+  function openPreviewModalWithCanvas(canvas) {
+    if (lastCaptureObjectURL) {
+      URL.revokeObjectURL(lastCaptureObjectURL);
+      lastCaptureObjectURL = null;
+    }
+    lastCaptureBlob = null;
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        DOMElements.previewImage.src = canvas.toDataURL('image/png');
+      } else {
+        lastCaptureBlob = blob;
+        lastCaptureObjectURL = URL.createObjectURL(blob);
+        DOMElements.previewImage.src = lastCaptureObjectURL;
+      }
+      DOMElements.previewModal.classList.remove('hidden');
+      DOMElements.body.classList.add('modal-open');
+    }, 'image/png');
+  }
+
+  /**
+   * プレビューモーダルを閉じ、再撮影を開始する
+   */
+  function closePreviewModalAndRetake() {
+    DOMElements.previewModal.classList.add('hidden');
+    DOMElements.body.classList.remove('modal-open');
+
+    if (lastCaptureObjectURL) {
+      URL.revokeObjectURL(lastCaptureObjectURL);
+      lastCaptureObjectURL = null;
+    }
+    lastCaptureBlob = null;
+
+    startCamera(); // 再撮影を開始
+  }
+
+  /**
+   * スタンプ選択シートを開く
+   */
+  function openStampSheet() {
+    // シート表示中はダイヤルを隠す（被り防止）
+    if (dialOpen) {
+      hideActionDial();
+    }
+    DOMElements.stampSheet.classList.add('open');
+    isSheetOpen = true;
+    DOMElements.container.classList.add('sheet-open');
+    activateStampTab(currentStampTab); // 前回のタブをアクティブにする
+  }
+
+  /**
+   * スタンプ選択シートを閉じる
+   */
+  function closeStampSheet() {
+    DOMElements.stampSheet.classList.remove('open');
+    isSheetOpen = false;
+    DOMElements.container.classList.remove('sheet-open');
+  }
+
+  /**
+   * 指定されたスタンプタブをアクティブにする
+   * @param {string} tabName - アクティブにするタブの名前 (data-tab属性の値)
+   */
+  function activateStampTab(tabName) {
+    currentStampTab = tabName;
+
+    DOMElements.stampTabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      const panelId = `panel-${btn.dataset.tab}`;
+      btn.setAttribute('aria-controls', panelId);
+      btn.id = `tab-${btn.dataset.tab}`;
+    });
+
+    document.querySelectorAll('.stamp-panel').forEach(panel => {
+      const isActive = panel.dataset.tab === tabName;
+      panel.classList.toggle('active', isActive);
+      panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      if (isActive) {
+        panel.id = `panel-${tabName}`;
+        panel.setAttribute('aria-labelledby', `tab-${tabName}`);
+      }
+    });
+  }
+
+
+  // ==================== カメラ機能 ====================
+
+  /**
+   * カメラを起動する
+   */
   const startCamera = async () => {
     try {
       if (stream) {
@@ -75,46 +243,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       const constraints = {
         audio: false,
         video: {
-          facingMode: { ideal: currentFacingMode }, // ここを切り替え
-          width:  { ideal: 4096 },
-          height: { ideal: 4096 }
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: CAMERA_SETTINGS.idealWidth },
+          height: { ideal: CAMERA_SETTINGS.idealHeight }
         }
       };
       stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       const track = stream.getVideoTracks()[0];
-      const caps  = track.getCapabilities ? track.getCapabilities() : null;
+      const caps = track.getCapabilities ? track.getCapabilities() : null;
+
+      // 利用可能な最大解像度を適用
       if (caps && caps.width && caps.height) {
         try {
           await track.applyConstraints({
-            width:  { ideal: caps.width.max },
+            width: { ideal: caps.width.max },
             height: { ideal: caps.height.max }
           });
-        } catch (e) { console.warn('applyConstraints skipped:', e); }
+        } catch (e) {
+          console.warn('applyConstraints skipped:', e);
+        }
       }
 
-      cameraFeed.srcObject = stream;
-      await cameraFeed.play();
+      DOMElements.cameraFeed.srcObject = stream;
+      await DOMElements.cameraFeed.play();
 
       // インカメラの場合、video要素自体を水平反転させる
       if (currentFacingMode === 'user') {
-        cameraFeed.style.transform = 'scaleX(-1)';
+        DOMElements.cameraFeed.style.transform = 'scaleX(-1)';
       } else {
-        cameraFeed.style.transform = 'none'; // 背面カメラの場合は反転を解除
+        DOMElements.cameraFeed.style.transform = 'none'; // 背面カメラの場合は反転を解除
       }
 
       const settings = track.getSettings ? track.getSettings() : {};
       console.log('Active camera resolution =', settings.width, 'x', settings.height, ', Facing Mode =', currentFacingMode);
 
       setCameraView(true);
-      permissionMessage.style.textAlign = 'center';
-      permissionMessage.innerHTML = [
+      // カメラが起動したら権限モーダルの内容を更新
+      DOMElements.permissionMessage.style.textAlign = 'center';
+      DOMElements.permissionMessage.innerHTML = [
         'IM課 モックアップ制作',
         "B'zライブツアー",
         'WebARコンテンツ'
       ].join('<br>');
+      hidePermissionModal(); // カメラ起動に成功したらモーダルを閉じる
 
-      // 初回に Fabric 初期化
       if (!fcanvas) {
         initFabricCanvas();
       } else {
@@ -122,662 +295,580 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
-      if (err.name === 'NotAllowedError') {
-        permissionMessage.textContent = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
-      } else if (err.name === 'NotFoundError') {
-        permissionMessage.textContent = 'カメラが見つかりませんでした。';
-      } else {
-        permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
+      let errorMessage = 'カメラへのアクセス中にエラーが発生しました。';
+      if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+        errorMessage = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'カメラが見つかりませんでした。';
+      } else if (err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
+        errorMessage = 'カメラにアクセスできません。他のアプリで使用中かもしれません。';
       }
-      permissionModal.style.display = 'flex';
-      document.body.classList.add('modal-open');
+      showPermissionModal(errorMessage);
     }
   };
 
-  // カメラ切り替えボタンのイベントリスナー
-  cameraToggleButton.addEventListener('click', async () => {
-    currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
-    await startCamera();
-  });
 
-  await startCamera();
+  // ==================== フレーム描画機能 ====================
 
-  if (permissionMessage.textContent || cameraFeed.srcObject) {
-    // 権限メッセージが設定されている場合、またはカメラストリームがまだない場合のみ表示
-    if (!cameraFeed.srcObject && !permissionMessage.textContent) {
-      // ストリームがまだなく、エラーメッセージもなければ、許可待ちの状態
-      permissionMessage.textContent = 'カメラのアクセスを待機しています...';
-    }
-    permissionModal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-  }
-  closeModalButton.addEventListener('click', () => {
-    permissionModal.style.display = 'none';
-    document.body.classList.remove('modal-open');
-  });
+  /**
+   * フレーム画像をキャンバスに描画する
+   */
+  async function drawFramesToCanvas() {
+    await Promise.all([waitImage(DOMElements.frameTopEl), waitImage(DOMElements.frameBottomEl)]);
 
-  // ---- フレーム画像のロード完了を保証
-  function waitImage(el) {
-    return new Promise((resolve) => {
-      if (!el) return resolve(null);
-      if (el.complete && el.naturalWidth && el.naturalHeight) return resolve(el);
-      el.addEventListener('load', () => resolve(el), { once: true });
-      el.addEventListener('error', () => resolve(null), { once: true });
-    });
-  }
-  async function ensureFramesReady() {
-    await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
-  }
-
-  // ---- フレーム合成（表示と一致）幅100%フィット
-  function drawFramesToCanvas() {
-    const cw = photoCanvas.width;
-    const ch = photoCanvas.height;
+    const cw = DOMElements.photoCanvas.width;
+    const ch = DOMElements.photoCanvas.height;
     const ctx = canvasContext;
 
-    const drawOne = (imgEl, place) => {
-      if (!imgEl) return;
+    const drawOneFrame = (imgEl, place) => {
+      if (!imgEl || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
+
       const iw = imgEl.naturalWidth;
       const ih = imgEl.naturalHeight;
-      if (!iw || !ih) return;
-
-      // キャンバス幅にフィット（等比）
-      const scale = cw / iw;
-      const drawW = cw;                     // 幅100%
-      const drawH = Math.round(ih * scale); // 高さは比率で
-      const dx = 0;                         // 幅いっぱいなので0
-      const dy = (place === 'top') ? 0 : (ch - drawH); // 上端 or 下端に揃える
+      const scale = cw / iw; // キャンバス幅にフィットするためのスケール
+      const drawW = cw;
+      const drawH = Math.round(ih * scale);
+      const dx = 0;
+      const dy = (place === 'top') ? 0 : (ch - drawH);
 
       ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
 
-    drawOne(frameTopEl, 'top');
-    drawOne(frameBottomEl, 'bottom');
+    drawOneFrame(DOMElements.frameTopEl, 'top');
+    drawOneFrame(DOMElements.frameBottomEl, 'bottom');
   }
 
-  // ---- プレビューをモーダルに表示
-  function openPreviewModalWithCanvas(canvas) {
-    if (lastCaptureObjectURL) {
-      URL.revokeObjectURL(lastCaptureObjectURL);
-      lastCaptureObjectURL = null;
-    }
-    lastCaptureBlob = null;
 
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        previewImage.src = canvas.toDataURL('image/png');
-      } else {
-        lastCaptureBlob = blob;
-        lastCaptureObjectURL = URL.createObjectURL(blob);
-        previewImage.src = lastCaptureObjectURL;
-      }
-      previewModal.classList.remove('hidden');
-      document.body.classList.add('modal-open');
-    }, 'image/png');
-  }
+  // ==================== Fabric.js スタンプ機能 ====================
 
-  function closePreviewModalAndRetake() {
-    previewModal.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-
-    if (lastCaptureObjectURL) {
-      URL.revokeObjectURL(lastCaptureObjectURL);
-      lastCaptureObjectURL = null;
-    }
-    lastCaptureBlob = null;
-
-    // 再撮影
-    startCamera();
-  }
-
-  // =================== Fabric.js：スタンプ ===================
-
-  // ---- ダイヤル表示中の一時ロック
-  function freezeTargetForDial(target){
-    if (!target) return;
-    target.__preLock = {
-      mvx: target.lockMovementX, mvy: target.lockMovementY,
-      sx: target.lockScalingX, sy: target.lockScalingY,
-      rot: target.lockRotation, hc: target.hasControls
-    };
-    target.lockMovementX = target.lockMovementY = true;
-    target.lockScalingX  = target.lockScalingY  = true;
-    target.lockRotation  = true;
-    target.hasControls   = false;
-    target.setCoords && target.setCoords();
-  }
-  function unfreezeTargetAfterDial(target){
-    if (!target || target._locked) return; // “本ロック”が指定されたら維持
-    const p = target.__preLock;
-    if (!p) return;
-    target.lockMovementX = p.mvx; target.lockMovementY = p.mvy;
-    target.lockScalingX  = p.sx;  target.lockScalingY  = p.sy;
-    target.lockRotation  = p.rot; target.hasControls   = p.hc;
-    target.__preLock = null;
-    target.setCoords && target.setCoords();
-  }
-
+  /**
+   * Fabric.jsキャンバスを初期化し、イベントリスナーを設定する
+   */
   function initFabricCanvas() {
-    if (fcanvas) { resizeStampCanvas(); return; }
+    if (fcanvas) {
+      resizeStampCanvas();
+      return;
+    }
 
-    fcanvas = new fabric.Canvas(stampCanvasEl, {
+    fcanvas = new fabric.Canvas(DOMElements.stampCanvasEl, {
       selection: true,
-      preserveObjectStacking: true
+      preserveObjectStacking: true,
+      defaultCursor: 'grab',
+      allowTouchScrolling: false, // Fabric.jsがタッチスクロールを妨げないように
+      targetFindTolerance: 12,
     });
     resizeStampCanvas();
 
-    // ラッパ/上キャンバスに z-index とタッチ設定を明示
+    // Fabric.jsが生成するラッパー要素にスタイルを適用
     const container = fcanvas.getElement().parentNode; // .canvas-container
     if (container) {
-      container.style.position  = 'absolute';
-      container.style.inset     = '0';
-      container.style.width     = '100%';
-      container.style.height    = '100%';
-      container.style.zIndex    = '7';      // フレーム(6)より前
+      Object.assign(container.style, {
+        position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: '7'
+      });
     }
-    fcanvas.upperCanvasEl.style.touchAction   = 'none';
-    fcanvas.upperCanvasEl.style.pointerEvents = 'auto';
-    fcanvas.upperCanvasEl.style.zIndex        = '7';
-    stampCanvasEl.style.pointerEvents = 'auto';
-    stampCanvasEl.style.touchAction   = 'none';
-    fcanvas.defaultCursor             = 'grab';
-    fcanvas.allowTouchScrolling       = false;
-    fcanvas.targetFindTolerance       = 12;
-    fabric.Object.prototype.cornerSize = 26;
-    fabric.Object.prototype.cornerStyle = 'circle';
-    fabric.Object.prototype.cornerColor = '#ff5b82';
-    fabric.Object.prototype.borderColor = '#ff5b82';
-    fabric.Object.prototype.transparentCorners = false;
+    Object.assign(fcanvas.upperCanvasEl.style, {
+      touchAction: 'none', pointerEvents: 'auto', zIndex: '7'
+    });
+
+    // Fabric.jsオブジェクトのデフォルト設定
+    Object.assign(fabric.Object.prototype, FABRIC_OBJECT_SETTINGS);
+
+    // 上下左右のコントロールを非表示にする
+    fabric.Object.prototype.setControlsVisibility({
+      mt: false, mb: false, ml: false, mr: false
+    });
 
     // ===== 2本指ジェスチャ（拡大/回転） =====
-    let gObj = null, gStart = null;
-    const getDist = (a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-    const getAngle=(a,b)=>Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX);
+    let gestureObject = null;
+    let gestureStart = null;
 
     fcanvas.upperCanvasEl.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         const obj = fcanvas.getActiveObject();
         if (!obj) return;
-        gObj = obj;
-        gStart = {
-          dist: getDist(e.touches[0], e.touches[1]),
+        gestureObject = obj;
+        gestureStart = {
+          dist: getDistance(e.touches[0], e.touches[1]),
           angle: getAngle(e.touches[0], e.touches[1]),
-          scaleX: obj.scaleX || obj.scale || 1,
+          scaleX: obj.scaleX || 1,
           angleDeg: obj.angle || 0
         };
-        e.preventDefault();
+        e.preventDefault(); // デフォルトのスクロールやズームを防止
       }
-    }, { passive:false });
+    }, { passive: false });
 
     fcanvas.upperCanvasEl.addEventListener('touchmove', (e) => {
-      if (gObj && e.touches.length === 2) {
-        const dist = getDist(e.touches[0], e.touches[1]);
-        const ang  = getAngle(e.touches[0], e.touches[1]);
+      if (gestureObject && e.touches.length === 2) {
+        const currentDist = getDistance(e.touches[0], e.touches[1]);
+        const currentAng = getAngle(e.touches[0], e.touches[1]);
 
-        const s = dist / gStart.dist;
-        const newScale = Math.max(0.1, Math.min(5, gStart.scaleX * s));
-        gObj.scale(newScale);
+        const scaleChange = currentDist / gestureStart.dist;
+        const newScale = Math.max(CAMERA_SETTINGS.minScale, Math.min(CAMERA_SETTINGS.maxScale, gestureStart.scaleX * scaleChange));
+        gestureObject.scale(newScale);
 
-        const deltaDeg = (ang - gStart.angle) * (180/Math.PI);
-        gObj.rotate(gStart.angleDeg + deltaDeg);
+        const angleChangeDeg = (currentAng - gestureStart.angle) * (180 / Math.PI);
+        gestureObject.rotate(gestureStart.angleDeg + angleChangeDeg);
 
-        gObj.setCoords();
+        gestureObject.setCoords();
         fcanvas.requestRenderAll();
         e.preventDefault();
       }
-    }, { passive:false });
+    }, { passive: false });
 
     fcanvas.upperCanvasEl.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2 && gObj) {
-        gObj = null;
-        gStart = null;
+      if (e.touches.length < 2 && gestureObject) {
+        gestureObject = null;
+        gestureStart = null;
         e.preventDefault();
       }
-    }, { passive:false });
+    }, { passive: false });
 
-    // ====== 長押しフリック・ダイヤル（存在する場合のみ有効化） ======
-    if (actionDial) {
-      const upper = fcanvas.upperCanvasEl;
-
-      const showActionDial = (x, y, target) => {
-        const containerRect = document.querySelector('.container').getBoundingClientRect();
-        const localX = x - containerRect.left;
-        const localY = y - containerRect.top;
-
-        // 対象を一時ロック（フリック中に動かないように）
-        freezeTargetForDial(target);
-
-        // Canvas 側もターゲット探索を止めて誤ドラッグを防ぐ
-        fcanvas.skipTargetFind = true;
-        fcanvas.selection = false;
-
-        actionDial.style.left = `${localX}px`;
-        actionDial.style.top  = `${localY}px`;
-        actionDial.classList.remove('hidden');
-        actionDial.setAttribute('aria-hidden', 'false');
-        dialOpen = true;
-
-        const lockBtn = actionDial.querySelector('[data-action="lock-toggle"]');
-        if (lockBtn) {
-          const locked = !!target._locked;
-          lockBtn.textContent = locked ? 'ロック解除' : 'ロック';
-        }
-      };
-
-      const hideActionDial = () => {
-        if (!dialOpen) return;
-        actionDial.classList.add('hidden');
-        actionDial.setAttribute('aria-hidden', 'true');
-        dialOpen = false;
-
-        // Canvas 側設定を元に戻す
-        fcanvas.skipTargetFind = false;
-        fcanvas.selection = true;
-
-        // 対象の一時ロックを解除（本ロックは維持）
-        if (lpTarget) unfreezeTargetAfterDial(lpTarget);
-      };
-
-      const doStampAction = (action, target) => {
-        if (!target || !fcanvas) return;
-        switch (action) {
-          case 'delete':
-            fcanvas.remove(target);
-            break;
-          case 'front':
-            fcanvas.bringToFront(target);
-            break;
-          case 'back':
-            fcanvas.sendToBack(target);
-            break;
-          case 'lock-toggle':
-            if (target._locked) {
-              // --- ロック解除 ---
-              target.lockMovementX = target.lockMovementY = false;
-              target.lockScalingX  = target.lockScalingY  = false;
-              target.lockRotation  = false;
-              target.hasControls   = true;
-              target.selectable    = true;
-              target.evented       = true;
-              target._locked       = false;
-              target.opacity       = 1;
-
-              // ★ 重要：仮ロックの復元を無効化
-              target.__preLock = null;
-            } else {
-              // --- ロック ---
-              target.lockMovementX = target.lockMovementY = true;
-              target.lockScalingX  = target.lockScalingY  = true;
-              target.lockRotation  = true;
-              target.hasControls   = false;
-              // 選択は可能なままでもOK（編集不可）
-              target.selectable    = true;
-              target.evented       = true;
-              target._locked       = true;
-              target.opacity       = 0.95;
-            }
-            break;
-        }
-        target.setCoords?.();
-        fcanvas.requestRenderAll();
-      };
-
-      // 長押し開始
-      upper.addEventListener('touchstart', (e) => {
-        // ピンチやシート表示中はスキップ
-        if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
-
-        // その位置のターゲットを拾う
-        const target = fcanvas.findTarget(e, true) || fcanvas.getActiveObject();
-        if (!target) { clearTimeout(lpTimer); return; }
-
-        lpTarget = target;
-        lpStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        clearTimeout(lpTimer);
-        lpTimer = setTimeout(() => {
-          // 長押し成立：アクティブ化してダイヤル表示
-          fcanvas.setActiveObject(lpTarget);
-          fcanvas.requestRenderAll();
-          showActionDial(lpStartPoint.x, lpStartPoint.y, lpTarget);
-          lpTimer = null;
-        }, LONGPRESS_MS);
-      }, { passive: true });
-
-      // 長押し判定中に大きく動いたらキャンセル
-      upper.addEventListener('touchmove', (e) => {
-        if (lpTimer && e.touches.length === 1 && lpStartPoint) {
-          const dx = e.touches[0].clientX - lpStartPoint.x;
-          const dy = e.touches[0].clientY - lpStartPoint.y;
-          if (Math.hypot(dx, dy) > 10) {
-            clearTimeout(lpTimer);
-            lpTimer = null;
-          }
-        }
-      }, { passive: true });
-
-      // フリック判定 & 後片付け
-      upper.addEventListener('touchend', (e) => {
-        // タイマーが残っていれば長押し不成立（通常タップ/ドラッグ）
-        if (lpTimer) {
-          clearTimeout(lpTimer);
-          lpTimer = null;
-          lpStartPoint = null;
-          lpTarget = null;
-          return;
-        }
-
-        if (dialOpen && lpStartPoint && lpTarget) {
-          const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-          if (t) {
-            const dx = t.clientX - lpStartPoint.x;
-            const dy = t.clientY - lpStartPoint.y;
-            const dist = Math.hypot(dx, dy);
-
-            if (dist >= FLICK_THRESHOLD) {
-              let action = null;
-              if (Math.abs(dx) > Math.abs(dy)) {
-                action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック(解除)
-              } else {
-                action = dy < 0 ? 'front' : 'back';         // ↑前面へ / ↓背面へ
-              }
-              doStampAction(action, lpTarget);
-            }
-          }
-          hideActionDial(); // 仮ロック解除もここで実行
-          lpStartPoint = null;
-          lpTarget = null;
-        }
-      }, { passive: true });
-
-      // ダイヤルのボタン（タップ）
-      actionDial.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('.dial-btn');
-        if (!btn || !lpTarget) return;
-        const action = btn.getAttribute('data-action');
-        doStampAction(action, lpTarget);
-        hideActionDial();
-        lpStartPoint = null;
-        lpTarget = null;
-      });
+    // ====== 長押しフリック・ダイヤル ======
+    if (DOMElements.actionDial) {
+      setupStampActionDial();
     }
   }
 
+  /**
+   * Fabric.jsキャンバスのサイズを調整する
+   */
   function resizeStampCanvas() {
-    if (!stampCanvasEl) return;
+    if (!DOMElements.stampCanvasEl) return;
     const dpr = window.devicePixelRatio || 1;
-    const rect = document.querySelector('.container').getBoundingClientRect();
+    const rect = DOMElements.container.getBoundingClientRect();
 
     const cssW = Math.max(1, Math.round(rect.width));
     const cssH = Math.max(1, Math.round(rect.height));
 
-    stampCanvasEl.width  = Math.round(cssW * dpr);
-    stampCanvasEl.height = Math.round(cssH * dpr);
-    stampCanvasEl.style.width  = cssW + 'px';
-    stampCanvasEl.style.height = cssH + 'px';
+    DOMElements.stampCanvasEl.width = Math.round(cssW * dpr);
+    DOMElements.stampCanvasEl.height = Math.round(cssH * dpr);
+    DOMElements.stampCanvasEl.style.width = cssW + 'px';
+    DOMElements.stampCanvasEl.style.height = cssH + 'px';
 
     if (fcanvas) {
       fcanvas.setWidth(cssW);
       fcanvas.setHeight(cssH);
-      fcanvas.setZoom(dpr);
+      // fcanvas.setZoom(dpr); // DPI ZoomはFabric.jsの内部描画に影響するため、通常はCSSで対応
       fcanvas.renderAll();
+      fcanvas.calcOffset(); // オフセットを再計算
     }
   }
 
+  /**
+   * URLからスタンプをFabric.jsキャンバスに追加する
+   * @param {string} url - スタンプ画像のURL
+   */
   function addStampFromURL(url) {
     if (!fcanvas) return;
 
     fabric.Image.fromURL(url, (img) => {
-      img.set({
-        originX: 'center',
-        originY: 'center',
-        selectable: true,
-        hasControls: true,      // ★ コントロールは表示
-        hasBorders: true,       // ★ 枠線も表示
-
-        // 四隅での拡大縮小時に縦横比を固定する
-        uniformScaling: true,   // ★ これを true にする
-
-        lockScalingFlip: true,
-        transparentCorners: false,
-        cornerColor: '#ff5b82',
-        cornerStyle: 'circle',
-        borderColor: '#ff5b82',
-        cornerSize: 26
-      });
-
-      // ★ 上下左右のコントロールを非表示にする
-      img.setControlsVisibility({
-        mt: false, // 上中央を非表示
-        mb: false, // 下中央を非表示
-        ml: false, // 左中央を非表示
-        mr: false  // 右中央を非表示
-      });
+      // 初期設定を適用
+      Object.assign(img, FABRIC_OBJECT_SETTINGS);
+      // 上下左右のコントロールを非表示にする
+      img.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
 
       // 初期スケール：短辺の30%
       const cssW = fcanvas.getWidth();
       const cssH = fcanvas.getHeight();
-      const base = Math.min(cssW, cssH) * 0.3;
+      const base = Math.min(cssW, cssH) * CAMERA_SETTINGS.initialStampScaleRatio;
       const scale = base / img.width;
       img.scale(scale);
 
       fcanvas.add(img);
-
-      // 画面の“見た目の中央”へ
-      fcanvas.viewportCenterObject(img);
+      fcanvas.viewportCenterObject(img); // 画面中央に配置
       img.setCoords();
 
-      // 前面＆選択
-      fcanvas.bringToFront(img);
-      fcanvas.setActiveObject(img);
+      fcanvas.bringToFront(img); // 最前面へ
+      fcanvas.setActiveObject(img); // 選択状態にする
       fcanvas.requestRenderAll();
 
-      // 追加後はシートを閉じて即編集できるように
-      closeStampSheet();
+      closeStampSheet(); // 追加後はシートを閉じる
     }, { crossOrigin: 'anonymous' });
   }
 
-  function openStampSheet() {
-    // シート表示中はダイヤルを隠す（被り防止）
-    if (actionDial && dialOpen) {
-      actionDial.classList.add('hidden');
-      actionDial.setAttribute('aria-hidden', 'true');
-      dialOpen = false;
-    }
-    stampSheet.classList.add('open');
-    isSheetOpen = true;
-    document.querySelector('.container')?.classList.add('sheet-open');
+  /**
+   * 対象オブジェクトをダイヤル表示中に一時的にロックする
+   * @param {fabric.Object} target
+   */
+  function freezeTargetForDial(target) {
+    if (!target) return;
+    target.__preLock = {
+      mvx: target.lockMovementX, mvy: target.lockMovementY,
+      sx: target.lockScalingX, sy: target.lockScalingY,
+      rot: target.lockRotation, hc: target.hasControls,
+      sel: target.selectable, ev: target.evented
+    };
+    target.lockMovementX = target.lockMovementY = true;
+    target.lockScalingX = target.lockScalingY = true;
+    target.lockRotation = true;
+    target.hasControls = false;
+    target.selectable = false; // ダイヤル中は選択不可に
+    target.evented = false; // イベントも受け付けない
+    target.setCoords && target.setCoords();
   }
-  function closeStampSheet() {
-    stampSheet.classList.remove('open');
-    isSheetOpen = false;
-    document.querySelector('.container')?.classList.remove('sheet-open');
+
+  /**
+   * 対象オブジェクトの一時ロックを解除する
+   * @param {fabric.Object} target
+   */
+  function unfreezeTargetAfterDial(target) {
+    if (!target || target._locked) return; // "本ロック"が指定されたら維持
+    const p = target.__preLock;
+    if (!p) return;
+    target.lockMovementX = p.mvx;
+    target.lockMovementY = p.mvy;
+    target.lockScalingX = p.sx;
+    target.lockScalingY = p.sy;
+    target.lockRotation = p.rot;
+    target.hasControls = p.hc;
+    target.selectable = p.sel;
+    target.evented = p.ev;
+    target.__preLock = null;
+    target.setCoords && target.setCoords();
   }
 
-  // ===== タブ切り替え =====
-  let currentStampTab = 'stamp1'; // デフォルト
+  /**
+   * スタンプアクションダイヤルを設定する
+   */
+  function setupStampActionDial() {
+    const upperCanvas = fcanvas.upperCanvasEl;
 
-  function activateStampTab(tabName) {
-    currentStampTab = tabName;
+    /**
+     * アクションダイヤルを表示する
+     * @param {number} x - クリック/タップの中心X座標 (client座標)
+     * @param {number} y - クリック/タップの中心Y座標 (client座標)
+     * @param {fabric.Object} target - 操作対象のFabricオブジェクト
+     */
+    const showActionDial = (x, y, target) => {
+      const containerRect = DOMElements.container.getBoundingClientRect();
+      const localX = x - containerRect.left;
+      const localY = y - containerRect.top;
 
-    // タブボタンの状態
-    document.querySelectorAll('#stampTabs .tab-btn').forEach(btn => {
-      const isActive = btn.dataset.tab === tabName;
-      btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      // タブ→パネル関連ARIA
-      const panelId = 'panel-' + btn.dataset.tab;
-      btn.setAttribute('aria-controls', panelId);
-      btn.id = 'tab-' + btn.dataset.tab;
-    });
+      // 対象を一時ロック（フリック中に動かないように）
+      freezeTargetForDial(target);
 
-    // パネルの表示切替
-    document.querySelectorAll('.stamp-panel').forEach(panel => {
-      const isActive = panel.dataset.tab === tabName;
-      panel.classList.toggle('active', isActive);
-      panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-      if (isActive) {
-        panel.id = 'panel-' + tabName;
-        panel.setAttribute('aria-labelledby', 'tab-' + tabName);
+      // Canvas 側もターゲット探索を止めて誤ドラッグを防ぐ
+      fcanvas.skipTargetFind = true;
+      fcanvas.selection = false;
+
+      DOMElements.actionDial.style.left = `${localX}px`;
+      DOMElements.actionDial.style.top = `${localY}px`;
+      DOMElements.actionDial.classList.remove('hidden');
+      DOMElements.actionDial.setAttribute('aria-hidden', 'false');
+      dialOpen = true;
+
+      const lockBtn = DOMElements.actionDial.querySelector('[data-action="lock-toggle"]');
+      if (lockBtn) {
+        lockBtn.textContent = target._locked ? 'ロック解除' : 'ロック';
       }
-    });
-  }
+    };
 
-  // タブボタンのクリック
-  document.getElementById('stampTabs')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.tab-btn');
-    if (!btn) return;
-    const tabName = btn.dataset.tab;
-    if (tabName) activateStampTab(tabName);
-  });
+    /**
+     * アクションダイヤルを非表示にする
+     */
+    const hideActionDial = () => {
+      if (!dialOpen) return;
+      DOMElements.actionDial.classList.add('hidden');
+      DOMElements.actionDial.setAttribute('aria-hidden', 'true');
+      dialOpen = false;
 
-  // シートを開いたときは前回のタブを保持（初回は 'stamp1'）
-  const _openStampSheetOrig = openStampSheet;
-  openStampSheet = function() {
-    _openStampSheetOrig();
-    activateStampTab(currentStampTab || 'stamp1');
-  };
+      fcanvas.skipTargetFind = false;
+      fcanvas.selection = true;
+      if (lpTarget) unfreezeTargetAfterDial(lpTarget);
+    };
 
-  stampButton?.addEventListener('click', () => {
-    if (!fcanvas) initFabricCanvas();
-    if (isSheetOpen) closeStampSheet(); else openStampSheet();
-  });
-  sheetCloseX?.addEventListener('click', closeStampSheet);
+    /**
+     * スタンプアクションを実行する
+     * @param {string} action - 実行するアクション ('delete', 'front', 'back', 'lock-toggle')
+     * @param {fabric.Object} target - 操作対象のFabricオブジェクト
+     */
+    const doStampAction = (action, target) => {
+      if (!target || !fcanvas) return;
+      switch (action) {
+        case 'delete':
+          fcanvas.remove(target);
+          break;
+        case 'front':
+          fcanvas.bringToFront(target);
+          break;
+        case 'back':
+          fcanvas.sendToBack(target);
+          break;
+        case 'lock-toggle':
+          target._locked = !target._locked; // ロック状態をトグル
+          // ロック状態に基づいてプロパティを設定
+          target.lockMovementX = target.lockMovementY = target._locked;
+          target.lockScalingX = target.lockScalingY = target._locked;
+          target.lockRotation = target._locked;
+          target.hasControls = !target._locked;
+          target.selectable = !target._locked; // ロック時は選択不可
+          target.evented = !target._locked; // ロック時はイベント無効
+          target.opacity = target._locked ? 0.95 : 1;
+          break;
+      }
+      target.setCoords?.();
+      fcanvas.requestRenderAll();
+    };
 
-  document.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.stamp-thumb');
-    if (!btn) return;
-    const src = btn.getAttribute('data-src');
-    if (src) addStampFromURL(src);
-  });
+    // 長押し開始
+    upperCanvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || isSheetOpen) {
+        clearTimeout(lpTimer);
+        return;
+      }
 
-  window.addEventListener('resize', () => {
-    resizeStampCanvas();
-    if (fcanvas) fcanvas.calcOffset();
-  });
+      // その位置のターゲットを拾う
+      // event.target.closest('.canvas-container') が Fabric Canvas の DOM 要素
+      // fcanvas.findTarget(e) は、Fabric オブジェクトが実際にタップされたか検出
+      const pointer = fcanvas.getPointer(e.touches[0]);
+      const target = fcanvas.findTarget(e.touches[0], false) || fcanvas.getActiveObject();
 
-  // =================== シャッター（合成順：カメラ → フレーム → スタンプ） ===================
-  shutterButton.addEventListener('click', async () => {
-    if (!stream || !cameraFeed.srcObject) return;
+      if (!target || target.isType('activeSelection')) { // 複数選択は対象外
+        clearTimeout(lpTimer);
+        return;
+      }
 
-    // キャンバスの出力サイズは可視の video と一致
-    const cw = cameraFeed.clientWidth;
-    const ch = cameraFeed.clientHeight;
+      lpTarget = target;
+      lpStartPoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => {
+        // 長押し成立：アクティブ化してダイヤル表示
+        fcanvas.setActiveObject(lpTarget);
+        fcanvas.requestRenderAll();
+        showActionDial(lpStartPoint.x, lpStartPoint.y, lpTarget);
+        lpTimer = null;
+      }, LONGPRESS_MS);
+    }, { passive: true });
 
-    if (!cw || !ch) {
-      const rect = document.querySelector('.container').getBoundingClientRect();
-      photoCanvas.width  = Math.max(1, Math.round(rect.width));
-      photoCanvas.height = Math.max(1, Math.round(rect.height));
-    } else {
-      photoCanvas.width  = cw;
-      photoCanvas.height = ch;
-    }
-
-    const vw = cameraFeed.videoWidth;
-    const vh = cameraFeed.videoHeight;
-    if (!vw || !vh || cameraFeed.readyState < 2) {
-      setTimeout(() => shutterButton.click(), 50);
-      return;
-    }
-
-    const videoRatio  = vw / vh;
-    const canvasRatio = photoCanvas.width / photoCanvas.height;
-    let sx, sy, sWidth, sHeight;
-
-    if (videoRatio > canvasRatio) {
-      sHeight = vh;
-      sWidth  = Math.round(vh * canvasRatio);
-      sx = Math.round((vw - sWidth) / 2);
-      sy = 0;
-    } else {
-      sWidth  = vw;
-      sHeight = Math.round(vw / canvasRatio);
-      sx = 0;
-      sy = Math.round((vh - sHeight) / 2);
-    }
-
-    // 1) カメラ画像
-    canvasContext.setTransform(1, 0, 0, 1, 0, 0);
-    canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
-    
-    // インカメラの場合、画像を水平反転させる (video要素の表示に合わせてcanvasも反転)
-    if (currentFacingMode === 'user') {
-      canvasContext.translate(photoCanvas.width, 0);
-      canvasContext.scale(-1, 1);
-    }
-
-    canvasContext.drawImage(
-      cameraFeed,
-      sx, sy, sWidth, sHeight,
-      0, 0, photoCanvas.width, photoCanvas.height
-    );
-
-    // 反転状態をリセット
-    canvasContext.setTransform(1, 0, 0, 1, 0, 0);
-
-    // 2) フレーム（先に合成）
-    await ensureFramesReady();
-    drawFramesToCanvas();
-
-    // 3) スタンプ（最後に合成＝最前面に見える）
-    if (fcanvas) {
-      fcanvas.discardActiveObject(); // 現在アクティブなオブジェクトの選択を解除し、コントロールと枠線を非表示にする
-      fcanvas.renderAll(); // 変更を反映させるために再描画
-      canvasContext.drawImage(
-        stampCanvasEl,
-        0, 0, stampCanvasEl.width, stampCanvasEl.height,
-        0, 0, photoCanvas.width, photoCanvas.height
-      );
-    }
-
-    // ストリーム停止 → ビュー切替 → プレビュー
-    stream.getTracks().forEach(t => t.stop());
-    cameraFeed.srcObject = null;
-    setCameraView(false);
-
-    openPreviewModalWithCanvas(photoCanvas);
-  });
-
-  // プレビューモーダル操作
-  previewSaveBtn.addEventListener('click', () => {
-    const url = photoCanvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'photo_' + new Date().getTime() + '.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  });
-
-  previewShareBtn.addEventListener('click', async () => {
-    try {
-      if (navigator.canShare && lastCaptureBlob) {
-        const file = new File([lastCaptureBlob], 'photo.png', { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] });
-          return;
+    // 長押し判定中に大きく動いたらキャンセル
+    upperCanvas.addEventListener('touchmove', (e) => {
+      if (lpTimer && e.touches.length === 1 && lpStartPoint) {
+        const dx = e.touches[0].clientX - lpStartPoint.x;
+        const dy = e.touches[0].clientY - lpStartPoint.y;
+        if (Math.hypot(dx, dy) > 10) {
+          clearTimeout(lpTimer);
+          lpTimer = null;
         }
       }
-      // フォールバック：保存に誘導
-      const url = photoCanvas.toDataURL('image/png');
+    }, { passive: true });
+
+    // フリック判定 & 後片付け
+    upperCanvas.addEventListener('touchend', (e) => {
+      // タイマーが残っていれば長押し不成立（通常タップ/ドラッグ）
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+        lpStartPoint = null;
+        lpTarget = null;
+        return;
+      }
+
+      if (dialOpen && lpStartPoint && lpTarget) {
+        const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+        if (t) {
+          const dx = t.clientX - lpStartPoint.x;
+          const dy = t.clientY - lpStartPoint.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist >= FLICK_THRESHOLD) {
+            let action = null;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              action = dx > 0 ? 'delete' : 'lock-toggle'; // →削除 / ←ロック(解除)
+            } else {
+              action = dy < 0 ? 'front' : 'back'; // ↑前面へ / ↓背面へ
+            }
+            doStampAction(action, lpTarget);
+          }
+        }
+        hideActionDial(); // 仮ロック解除もここで実行
+        lpStartPoint = null;
+        lpTarget = null;
+      }
+    }, { passive: true });
+
+    // ダイヤルのボタン（タップ）
+    DOMElements.actionDial.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.dial-btn');
+      if (!btn || !lpTarget) return;
+      const action = btn.getAttribute('data-action');
+      doStampAction(action, lpTarget);
+      hideActionDial();
+      lpStartPoint = null;
+      lpTarget = null;
+    });
+  }
+
+
+  // ==================== イベントリスナーの登録 ====================
+
+  /**
+   * 全てのイベントリスナーを設定する
+   */
+  function setupEventListeners() {
+    DOMElements.closeModalButton.addEventListener('click', hidePermissionModal);
+    DOMElements.cameraToggleButton.addEventListener('click', () => {
+      currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+      startCamera();
+    });
+    DOMElements.stampButton.addEventListener('click', () => {
+      if (!fcanvas) initFabricCanvas();
+      isSheetOpen ? closeStampSheet() : openStampSheet();
+    });
+    DOMElements.sheetCloseX.addEventListener('click', closeStampSheet);
+
+    // スタンプサムネイルのクリックイベント
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.stamp-thumb');
+      if (!btn) return;
+      const src = btn.getAttribute('data-src');
+      if (src) addStampFromURL(src);
+    });
+
+    // スタンプタブのクリックイベント
+    DOMElements.stampTabsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      const tabName = btn.dataset.tab;
+      if (tabName) activateStampTab(tabName);
+    });
+
+    // シャッターボタン
+    DOMElements.shutterButton.addEventListener('click', async () => {
+      if (!stream || !DOMElements.cameraFeed.srcObject) return;
+
+      // キャンバスの出力サイズはコンテナの表示サイズに合わせる
+      const containerRect = DOMElements.container.getBoundingClientRect();
+      DOMElements.photoCanvas.width = Math.max(1, Math.round(containerRect.width));
+      DOMElements.photoCanvas.height = Math.max(1, Math.round(containerRect.height));
+
+      const vw = DOMElements.cameraFeed.videoWidth;
+      const vh = DOMElements.cameraFeed.videoHeight;
+      if (!vw || !vh || DOMElements.cameraFeed.readyState < 2) {
+        setTimeout(() => DOMElements.shutterButton.click(), 50); // 動画が準備できてなければリトライ
+        return;
+      }
+
+      // 描画するビデオの領域を計算 (アスペクト比を維持して中央を切り抜く)
+      const videoRatio = vw / vh;
+      const canvasRatio = DOMElements.photoCanvas.width / DOMElements.photoCanvas.height;
+      let sx, sy, sWidth, sHeight;
+
+      if (videoRatio > canvasRatio) { // ビデオがキャンバスより横長
+        sHeight = vh;
+        sWidth = Math.round(vh * canvasRatio);
+        sx = Math.round((vw - sWidth) / 2);
+        sy = 0;
+      } else { // ビデオがキャンバスより縦長
+        sWidth = vw;
+        sHeight = Math.round(vw / canvasRatio);
+        sx = 0;
+        sy = Math.round((vh - sHeight) / 2);
+      }
+
+      // 1) カメラ画像をキャンバスに描画
+      canvasContext.setTransform(1, 0, 0, 1, 0, 0); // 変換をリセット
+      canvasContext.clearRect(0, 0, DOMElements.photoCanvas.width, DOMElements.photoCanvas.height);
+
+      // インカメラの場合、画像を水平反転させる (video要素の表示に合わせてcanvasも反転)
+      if (currentFacingMode === 'user') {
+        canvasContext.translate(DOMElements.photoCanvas.width, 0);
+        canvasContext.scale(-1, 1);
+      }
+
+      canvasContext.drawImage(
+        DOMElements.cameraFeed,
+        sx, sy, sWidth, sHeight,
+        0, 0, DOMElements.photoCanvas.width, DOMElements.photoCanvas.height
+      );
+
+      canvasContext.setTransform(1, 0, 0, 1, 0, 0); // 反転状態をリセット
+
+      // 2) フレームを合成
+      await drawFramesToCanvas();
+
+      // 3) スタンプを合成（最前面）
+      if (fcanvas) {
+        fcanvas.discardActiveObject(); // アクティブなオブジェクトの選択を解除
+        fcanvas.renderAll(); // 変更を反映
+        canvasContext.drawImage(
+          DOMElements.stampCanvasEl,
+          0, 0, DOMElements.stampCanvasEl.width, DOMElements.stampCanvasEl.height,
+          0, 0, DOMElements.photoCanvas.width, DOMElements.photoCanvas.height
+        );
+      }
+
+      // ストリーム停止 → ビュー切替 → プレビュー
+      stream.getTracks().forEach(t => t.stop());
+      DOMElements.cameraFeed.srcObject = null;
+      setCameraView(false);
+
+      openPreviewModalWithCanvas(DOMElements.photoCanvas);
+    });
+
+    // プレビューモーダル操作
+    DOMElements.previewSaveBtn.addEventListener('click', () => {
+      const url = DOMElements.photoCanvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'photo_' + new Date().getTime() + '.png';
-      document.body.appendChild(a);
+      a.download = `photo_${new Date().getTime()}.png`;
+      DOMElements.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      alert('共有がサポートされていないため、画像を保存しました。端末の共有機能からX/Instagramへ送ってください。');
-    } catch (e) {
-      console.warn('共有に失敗:', e);
-      alert('共有に失敗しました。保存してから端末の共有機能をご利用ください。');
-    }
-  });
+      DOMElements.body.removeChild(a);
+    });
 
-  function handlePreviewClose() { closePreviewModalAndRetake(); }
-  previewCloseBtn.addEventListener('click', handlePreviewClose);
-  previewCloseX .addEventListener('click', handlePreviewClose);
+    DOMElements.previewShareBtn.addEventListener('click', async () => {
+      try {
+        if (navigator.canShare && lastCaptureBlob) {
+          const file = new File([lastCaptureBlob], 'photo.png', { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;
+          }
+        }
+        // フォールバック：保存に誘導
+        const url = DOMElements.photoCanvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `photo_${new Date().getTime()}.png`;
+        DOMElements.body.appendChild(a);
+        a.click();
+        DOMElements.body.removeChild(a);
+        alert('共有がサポートされていないため、画像を保存しました。端末の共有機能からX/Instagramへ送ってください。');
+      } catch (e) {
+        console.warn('共有に失敗:', e);
+        if (e.name !== 'AbortError') { // ユーザーが共有をキャンセルした場合はアラートしない
+          alert('共有に失敗しました。保存してから端末の共有機能をご利用ください。');
+        }
+      }
+    });
 
-  // ページ離脱時にストリーム停止
-  window.addEventListener('beforeunload', () => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  });
+    DOMElements.previewCloseBtn.addEventListener('click', closePreviewModalAndRetake);
+    DOMElements.previewCloseX.addEventListener('click', closePreviewModalAndRetake);
+
+    // リサイズイベントハンドラ
+    window.addEventListener('resize', () => {
+      resizeStampCanvas();
+      if (fcanvas) fcanvas.calcOffset();
+    });
+
+    // ページ離脱時にストリーム停止
+    window.addEventListener('beforeunload', () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    });
+  }
+
+  // ==================== 初期化処理 ====================
+  // 最初にカメラを起動
+  await startCamera();
+
+  // カメラ起動失敗時などに権限モーダルが表示されたままの場合の対応
+  if (DOMElements.permissionModal.style.display === 'flex' && !DOMElements.permissionMessage.textContent) {
+    DOMElements.permissionMessage.textContent = 'カメラのアクセスを待機しています...';
+  }
+
+  // イベントリスナーを設定
+  setupEventListeners();
+
+  // 初期タブをアクティブ化
+  activateStampTab(currentStampTab);
 });
