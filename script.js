@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       cameraToggleButton.classList.remove('hidden'); // カメラボタンも表示
     } else {
       cameraFeed.classList.add('hidden');
-      photoCanvas.classList.add('hidden'); // 撮影後は非表示
+      photoCanvas.classList.remove('hidden'); // 撮影後は非表示
       shutterButton.classList.add('hidden');
       cameraToggleButton.classList.add('hidden'); // カメラボタンも非表示
     }
@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1) カメラ画像
     canvasContext.setTransform(1, 0, 0, 1, 0, 0);
     canvasContext.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
-
+    
     // インカメラの場合、画像を水平反転させる
     if (currentFacingMode === 'user') {
       canvasContext.translate(photoCanvas.width, 0);
