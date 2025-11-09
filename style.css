@@ -46,9 +46,9 @@ body {
 #frameBottom {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);  /* 中央寄せ */
-  width: 100%;  /* 画面幅いっぱい */
-  height: auto;  /* 縦は比率維持 */
+  transform: translateX(-50%); /* 中央寄せ */
+  width: 100%;                 /* 画面幅いっぱい */
+  height: auto;                /* 縦は比率維持 */
   pointer-events: none;
   z-index: 6;
   transform-origin: center center;
@@ -59,9 +59,8 @@ body {
   transform-origin: center top;
 }
 
-/* ブラウザ下部UIバー + セーフエリアを考慮 */
 #frameBottom {
-  bottom: max(env(safe-area-inset-bottom, 0px), 60px);
+  bottom: calc(0px + env(safe-area-inset-bottom, 0px)); /* 新しいbottomプロパティ */
   transform-origin: center bottom;
 }
 

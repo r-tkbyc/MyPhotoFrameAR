@@ -155,16 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const drawW = cw;                     // 幅100%
       const drawH = Math.round(ih * scale); // 高さは比率で
       const dx = 0;                         // 幅いっぱいなので0
-
-      // ★ CSSと同じオフセットを適用
-      let dy;
-      if (place === 'top') {
-        dy = 0; // 上端
-      } else {
-        // 下端から60px上げる（CSSの bottom: max(..., 60px) と一致）
-        const bottomOffset = 60;
-        dy = ch - drawH - bottomOffset;
-      }
+      const dy = (place === 'top') ? 0 : (ch - drawH); // 上端 or 下端に揃える
 
       ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
