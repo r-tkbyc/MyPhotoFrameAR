@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="versionInfo">IM_v2.1.4</div>
+  <div id="versionInfo">IM_v2.1.5</div>
 
   <div class="container">
     <!-- カメラ映像 -->
@@ -37,7 +37,10 @@
     <!-- カメラ許可メッセージ用モーダル -->
     <div id="permissionModal" class="modal">
       <div class="modal-content">
-        <p id="permissionMessage"></p>
+        <!-- 変更ここから -->
+        <p id="permissionMessage" class="hidden"></p> <!-- hidden属性を追加してデフォルトで非表示に -->
+        <img id="permissionImage" src="./Assets/StartModal.png" alt="WebARコンテンツ説明" />
+        <!-- 変更ここまで -->
         <button id="closeModalButton">OK</button>
       </div>
     </div>

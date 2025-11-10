@@ -135,18 +135,43 @@ body {
   justify-content: center; align-items: center;
 }
 .modal-content {
-  background: #fff; padding: 30px; border-radius: 10px; text-align: center;
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px; text-align: center;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-width: 80%;
   animation: fadeIn .3s ease-out;
+  display: flex; /* 追加: flexboxを使って子要素を縦に並べる */
+  flex-direction: column; /* 追加: 子要素を縦方向に並べる */
+  justify-content: center; /* 追加: 垂直方向中央寄せ */
+  align-items: center; /* 追加: 水平方向中央寄せ */
 }
-.modal-content p { margin-bottom: 20px; font-size: 1.1em; color: #333; }
+/* permissionMessage のスタイルを再定義 */
+#permissionMessage {
+  margin-bottom: 20px;
+  font-size: 1.1em;
+  color: #333;
+  /* 画像と共存するために、必要に応じて調整 */
+  order: 1; /* flexアイテムの並び順 (画像より上に表示) */
+}
 .modal-content button {
   background: #007bff; color: #fff; border: none;
   padding: 10px 25px; border-radius: 5px; cursor: pointer; font-size: 1em;
   transition: background-color .2s ease;
+  margin-top: 20px;
+  order: 3; /* ボタンは一番下に */
 }
-.modal-content button:hover { background: #0056b3; }
 @keyframes fadeIn { from {opacity:0; transform: translateY(-20px);} to {opacity:1; transform: translateY(0);} }
+
+/* 許可モーダルの画像スタイル */
+#permissionImage {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  max-height: 70vh;
+  object-fit: contain;
+  order: 2; /* テキストとボタンの間に配置 */
+}
 
 /* ===== 撮影プレビュー専用 ===== */
 #previewModal:not(.hidden) { display: flex; }

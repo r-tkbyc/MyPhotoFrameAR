@@ -107,12 +107,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Active camera resolution =', settings.width, 'x', settings.height, ', Facing Mode =', currentFacingMode);
 
       setCameraView(true);
-      permissionMessage.style.textAlign = 'center';
-      permissionMessage.innerHTML = [
-        'IM課 モックアップ制作',
-        "B'zライブツアー",
-        'WebARコンテンツ'
-      ].join('<br>');
+
+      // 成功時は画像を優先表示するために、テキスト要素と画像要素の表示を切り替える
+      if (permissionImage) permissionImage.classList.remove('hidden');
+      // ここで permissionMessage は常にhiddenにしておきます。
+      if (permissionMessage) permissionMessage.classList.add('hidden');
+
 
       // 初回に Fabric 初期化
       if (!fcanvas) {
@@ -122,12 +122,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
-      if (err.name === 'NotAllowedError') {
-        permissionMessage.textContent = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
-      } else if (err.name === 'NotFoundError') {
-        permissionMessage.textContent = 'カメラが見つかりませんでした。';
+      // ★ 失敗時には画像を非表示にし、テキスト要素を表示する
+      if (permissionImage) permissionImage.classList.add('hidden');
+      if (permissionMessage) {
+        permissionMessage.classList.remove('hidden'); // テキスト要素を表示
+        permissionMessage.style.textAlign = 'center';
+        if (err.name === 'NotAllowedError') {
+          permissionMessage.textContent = 'カメラの使用が拒否されました。ブラウザの設定で許可してください。';
+        } else if (err.name === 'NotFoundError') {
+          permissionMessage.textContent = 'カメラが見つかりませんでした。';
+        } else {
+          permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
+        }
       } else {
-        permissionMessage.textContent = 'カメラへのアクセス中にエラーが発生しました。';
+         // permissionMessage が存在しない場合のフォールバック（例：alertなど）
+         alert('カメラへのアクセスに失敗しました: ' + err.message);
       }
       permissionModal.style.display = 'flex';
       document.body.classList.add('modal-open');
@@ -142,19 +151,95 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await startCamera();
 
-  if (permissionMessage.textContent || cameraFeed.srcObject) {
-    // 権限メッセージが設定されている場合、またはカメラストリームがまだない場合のみ表示
-    if (!cameraFeed.srcObject && !permissionMessage.textContent) {
-      // ストリームがまだなく、エラーメッセージもなければ、許可待ちの状態
-      permissionMessage.textContent = 'カメラのアクセスを待機しています...';
-    }
+  // モーダルの表示判定を調整
+  // カメラアクセスが成功した場合は画像、失敗した場合はテキストが表示される
+  // どちらかが表示されることになるので、両方を監視する
+  const isImageOrMessageVisible = (permissionImage && !permissionImage.classList.contains('hidden')) ||
+                                  (permissionMessage && !permissionMessage.classList.contains('hidden') && permissionMessage.textContent);
+  
+  if (isImageOrMessageVisible || !cameraFeed.srcObject) { // カメラストリームがまだない場合もモーダルを表示
     permissionModal.style.display = 'flex';
     document.body.classList.add('modal-open');
+  } else {
+    // 成功してストリームが確立されているが、モーダルが隠れている場合は開かない
+    permissionModal.style.display = 'none';
+    document.body.classList.remove('modal-open');
   }
+
   closeModalButton.addEventListener('click', () => {
     permissionModal.style.display = 'none';
     document.body.classList.remove('modal-open');
   });
+
+  // （以前の変更で `permissionMessage` の要素自体を削除してしまったため、`index.html` も修正が必要です。）
+  // GPSの処理も追加する場合、navigator.geolocation.getCurrentPosition() を使用し、
+  // その失敗時にも同様に permissionMessage にテキストを設定します。
+
+  // 以下、GPS位置情報アクセスの追加例
+  async function requestGeolocationPermission() {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        if (permissionImage) permissionImage.classList.add('hidden');
+        if (permissionMessage) {
+          permissionMessage.classList.remove('hidden');
+          permissionMessage.textContent = 'お使いのブラウザは位置情報サービスに対応していません。';
+        }
+        permissionModal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        resolve(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log('位置情報アクセス成功:', pos);
+          resolve(true);
+        },
+        (err) => {
+          console.error('位置情報アクセス失敗:', err);
+          if (permissionImage) permissionImage.classList.add('hidden');
+          if (permissionMessage) {
+            permissionMessage.classList.remove('hidden');
+            permissionMessage.style.textAlign = 'center';
+            switch (err.code) {
+              case err.PERMISSION_DENIED:
+                permissionMessage.textContent = '位置情報の使用が拒否されました。ブラウザの設定で許可してください。';
+                break;
+              case err.POSITION_UNAVAILABLE:
+                permissionMessage.textContent = '位置情報を取得できませんでした。';
+                break;
+              case err.TIMEOUT:
+                permissionMessage.textContent = '位置情報の取得がタイムアウトしました。';
+                break;
+              default:
+                permissionMessage.textContent = '位置情報アクセス中に不明なエラーが発生しました。';
+                break;
+            }
+          }
+          permissionModal.style.display = 'flex';
+          document.body.classList.add('modal-open');
+          resolve(false);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    });
+  }
+
+  // カメラとGPSのパーミッションを両方チェックし、どちらかが失敗したらモーダルを表示
+  async function checkAllPermissions() {
+    const cameraGranted = await startCamera();
+    // GPSが必要な場合のみコメント解除して有効にしてください。
+    // const gpsGranted = await requestGeolocationPermission();
+
+    // 両方が成功した場合、モーダルを閉じる（または、成功時の画像表示のままにしておく）
+    // if (cameraGranted && gpsGranted) { // GPSを有効にする場合
+    if (cameraGranted) { // カメラのみの場合
+      permissionModal.style.display = 'none';
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  // ページロード時に全パーミッションチェックを実行
+  // checkAllPermissions(); // これを有効にする場合、`await startCamera();` をコメントアウトしてください。
 
   // ---- フレーム画像のロード完了を保証
   function waitImage(el) {
