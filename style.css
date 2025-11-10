@@ -288,7 +288,10 @@ body {
 #stampActionDial .dial-up    { left: -48px; bottom: 72px; }/* ↑ 前面へ */
 #stampActionDial .dial-down  { left: -48px; top:    72px; }/* ↓ 背面へ */
 
-/* ====== 配色カスタマイズ（上書き）====== */
+
+
+
+/* ============ 配色カスタマイズ（上書き）25/11/10 ============ */
 
 /* 1) カメラ許可モーダルの OK ボタン（色と横幅を拡げる） */
 #closeModalButton{
