@@ -314,8 +314,8 @@ body {
   /* アクティブ時は黒い枠線 */
   background: #960000;          /* 本体色はそのまま */
   color: #fff;
-  border-color: #000000;
-  box-shadow: 0 0 0 2px #000000 inset; /* ← 罫線の“太さ”はこの 2px を調整 */
+  border-color: #ff0000;
+  box-shadow: 0 0 0 2px #ff0000 inset; /* ← 罫線の“太さ”はこの 2px を調整 */
 }
 
 /* （必要なら）サムネボタンにも枠色を付けたい場合は以下を追加
