@@ -4,9 +4,9 @@ const IS_GPS_LIMIT_ENABLED = true;
 
 // 1. エリア設定（例として東京駅周辺 半径500m に設定）
 // IS_GPS_LIMIT_ENABLED が true の場合のみ、以下の設定が使用されます。
-const ALLOWED_LATITUDE = 35.57017818342579; // 許可エリア中心の緯度
-const ALLOWED_LONGITUDE = 139.74849275427871; // 許可エリア中心の経度
-const ALLOWED_RADIUS_METERS = 10; // 許可エリアの半径（メートル）
+const ALLOWED_LATITUDE = 35.572474208473515; // 許可エリア中心の緯度
+const ALLOWED_LONGITUDE = 139.74800306377824; // 許可エリア中心の経度
+const ALLOWED_RADIUS_METERS = 100; // 許可エリアの半径（メートル）
 
 /**
  * 2. 2点間の緯度経度から距離を計算する（ヒュベニの公式）
