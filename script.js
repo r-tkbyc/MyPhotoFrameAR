@@ -1,9 +1,12 @@
-// ★ 追加：ここから ===============================================================
+// ★★★ GPSエリア限定機能の有効/無効を切り替える設定 ★★★
+// true: エリア限定を有効にする / false: エリア限定を無効にする
+const IS_GPS_LIMIT_ENABLED = true;
+
 // 1. エリア設定（例として東京駅周辺 半径500m に設定）
-// この緯度・経度・半径を、実際に制限したいエリアの値に変更してください。
-const ALLOWED_LATITUDE = 35.57250720922965; // 許可エリア中心の緯度
-const ALLOWED_LONGITUDE = 139.7481700476735; // 許可エリア中心の経度
-const ALLOWED_RADIUS_METERS = 100; // 許可エリアの半径（メートル）
+// IS_GPS_LIMIT_ENABLED が true の場合のみ、以下の設定が使用されます。
+const ALLOWED_LATITUDE = 35.57017818342579; // 許可エリア中心の緯度
+const ALLOWED_LONGITUDE = 139.74849275427871; // 許可エリア中心の経度
+const ALLOWED_RADIUS_METERS = 500; // 許可エリアの半径（メートル）
 
 /**
  * 2. 2点間の緯度経度から距離を計算する（ヒュベニの公式）
@@ -25,7 +28,6 @@ function getDistanceInMeters(lat1, lng1, lat2, lng2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-// ★ 追加：ここまで ===============================================================
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const permissionModal = document.getElementById('permissionModal');
   const permissionMessage = document.getElementById('permissionMessage');
   const closeModalButton = document.getElementById('closeModalButton');
-  const permissionImage = document.getElementById('permissionImage'); // ★ 追加
+  const permissionImage = document.getElementById('permissionImage');
 
   // プレビュー用モーダル
   const previewModal    = document.getElementById('previewModal');
@@ -58,41 +60,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // カメラ切り替えボタン
   const cameraToggleButton = document.getElementById('cameraToggleButton');
-  let currentFacingMode = 'environment'; // 'environment' (背面) or 'user' (前面)
+  let currentFacingMode = 'environment';
 
   // 長押しフリック用ダイヤル
   const actionDial = document.getElementById('stampActionDial');
   const LONGPRESS_MS = 450;
   const FLICK_THRESHOLD = 50;
 
-  let fcanvas = null;      // Fabric.Canvas
+  let fcanvas = null;
   let isSheetOpen = false;
-
   let stream = null;
   const canvasContext = photoCanvas.getContext('2d');
-
-  // プレビュー画像の一時データ
   let lastCaptureBlob = null;
   let lastCaptureObjectURL = null;
-
-  // ===== 長押し・フリック用ワーク変数 =====
   let lpTimer = null;
-  let lpStartPoint = null;  // {x, y} (client座標)
-  let lpTarget = null;      // fabric.Object
+  let lpStartPoint = null;
+  let lpTarget = null;
   let dialOpen = false;
 
-
-  // ★ 変更：UIを操作不可にする関数を追加
   const disableCameraFeatures = () => {
     shutterButton.disabled = true;
     stampButton.disabled = true;
     cameraToggleButton.disabled = true;
-    shutterButton.style.opacity = '0.5'; // 見た目も変える
+    shutterButton.style.opacity = '0.5';
     stampButton.style.opacity = '0.5';
     cameraToggleButton.style.opacity = '0.5';
   };
 
-  // ★ 変更：UIを操作可能にする関数を追加
   const enableCameraFeatures = () => {
     shutterButton.disabled = false;
     stampButton.disabled = false;
@@ -102,19 +96,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     cameraToggleButton.style.opacity = '1';
   };
 
-
-  // カメラ表示/撮影結果の切替
   const setCameraView = (isCameraActive) => {
     if (isCameraActive) {
       cameraFeed.classList.remove('hidden');
       photoCanvas.classList.add('hidden');
       shutterButton.classList.remove('hidden');
-      cameraToggleButton.classList.remove('hidden'); // カメラボタンも表示
+      cameraToggleButton.classList.remove('hidden');
     } else {
       cameraFeed.classList.add('hidden');
-      photoCanvas.classList.remove('hidden'); // 撮影後は非表示
+      photoCanvas.classList.remove('hidden');
       shutterButton.classList.add('hidden');
-      cameraToggleButton.classList.add('hidden'); // カメラボタンも非表示
+      cameraToggleButton.classList.add('hidden');
     }
   };
 
@@ -124,17 +116,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         stream.getTracks().forEach(t => t.stop());
         stream = null;
       }
-
       const constraints = {
         audio: false,
         video: {
-          facingMode: { ideal: currentFacingMode }, // ここを切り替え
+          facingMode: { ideal: currentFacingMode },
           width:  { ideal: 4096 },
           height: { ideal: 4096 }
         }
       };
       stream = await navigator.mediaDevices.getUserMedia(constraints);
-
       const track = stream.getVideoTracks()[0];
       const caps  = track.getCapabilities ? track.getCapabilities() : null;
       if (caps && caps.width && caps.height) {
@@ -145,30 +135,23 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         } catch (e) { console.warn('applyConstraints skipped:', e); }
       }
-
       cameraFeed.srcObject = stream;
       await cameraFeed.play();
-
       if (currentFacingMode === 'user') {
         cameraFeed.style.transform = 'scaleX(-1)';
       } else {
         cameraFeed.style.transform = 'none';
       }
-
       const settings = track.getSettings ? track.getSettings() : {};
       console.log('Active camera resolution =', settings.width, 'x', settings.height, ', Facing Mode =', currentFacingMode);
-
       setCameraView(true);
-      
-      // ★ 変更：カメラが起動できたら機能を有効化
       enableCameraFeatures();
-
       if (!fcanvas) {
         initFabricCanvas();
       } else {
         resizeStampCanvas();
       }
-      return true; // ★ 変更：成功したことを返す
+      return true;
     } catch (err) {
       console.error('カメラへのアクセスに失敗:', err);
       if (permissionImage) permissionImage.classList.add('hidden');
@@ -185,35 +168,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       permissionModal.style.display = 'flex';
       document.body.classList.add('modal-open');
-      disableCameraFeatures(); // ★ 追加：エラー時は機能を無効化
-      return false; // ★ 変更：失敗したことを返す
+      disableCameraFeatures();
+      return false;
     }
   };
 
-  // カメラ切り替えボタンのイベントリスナー
   cameraToggleButton.addEventListener('click', async () => {
     currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
     await startCamera();
   });
 
-  // closeModalButton.addEventListener('click', () => { // ★ 変更：このリスナーは不要になるので削除またはコメントアウト
-  //   permissionModal.style.display = 'none';
-  //   document.body.classList.remove('modal-open');
-  // });
-  
-  // ★ 変更：既存の requestGeolocationPermission 関数を全面的に書き換える
-  /**
-   * 3. 位置情報を取得し、エリア判定を行う関数
-   * @returns {Promise<boolean>} エリア内にいる場合は true, それ以外は false を返す Promise
-   */
   function checkLocationAndPermission() {
     return new Promise((resolve) => {
-      // 最初にモーダルの画像とテキストを制御
       if (permissionImage) permissionImage.classList.add('hidden');
       if (permissionMessage) permissionMessage.classList.remove('hidden');
       permissionMessage.style.textAlign = 'center';
 
-      // Geolocation API がサポートされているかチェック
       if (!navigator.geolocation) {
         permissionMessage.textContent = 'お使いのブラウザは位置情報サービスに対応していません。';
         permissionModal.style.display = 'flex';
@@ -222,26 +192,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // 位置情報を取得
       navigator.geolocation.getCurrentPosition(
-        // 成功時のコールバック
         (position) => {
           const userLat = position.coords.latitude;
           const userLng = position.coords.longitude;
           console.log(`位置情報取得成功: Lat=${userLat}, Lng=${userLng}`);
-
-          // 距離を計算
           const distance = getDistanceInMeters(userLat, userLng, ALLOWED_LATITUDE, ALLOWED_LONGITUDE);
           console.log(`指定エリアまでの距離: ${distance.toFixed(2)} メートル`);
-
-          // エリア内外を判定
           if (distance <= ALLOWED_RADIUS_METERS) {
-            // エリア内
             console.log("エリア内です。");
-            // この時点ではモーダルを閉じず、カメラ許可に進む
             resolve(true);
           } else {
-            // エリア外
             console.log("エリア外です。");
             permissionMessage.textContent = '指定されたエリア外のため、ご利用いただけません。';
             permissionModal.style.display = 'flex';
@@ -249,7 +210,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             resolve(false);
           }
         },
-        // 失敗時のコールバック
         (err) => {
           console.error('位置情報アクセス失敗:', err);
           switch (err.code) {
@@ -270,54 +230,49 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.body.classList.add('modal-open');
           resolve(false);
         },
-        // オプション
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   }
 
-  // ★ 変更：アプリ起動時のメイン処理
   async function initializeApp() {
-    // 最初に全ての機能を無効化しておく
     disableCameraFeatures();
 
-    // 1. 位置情報をチェック
-    const isUserInArea = await checkLocationAndPermission();
+    let isUserInArea = false; // ★ 変更：判定結果を格納する変数
+
+    // ★ 変更：ここから =======================================================
+    // 設定スイッチが true の場合のみ、GPSチェックを行う
+    if (IS_GPS_LIMIT_ENABLED) {
+      isUserInArea = await checkLocationAndPermission();
+    } else {
+      // false の場合は、GPSチェックをスキップして常に許可する
+      console.log("GPSエリア限定は無効です。");
+      isUserInArea = true;
+    }
+    // ★ 変更：ここまで =======================================================
+
 
     if (isUserInArea) {
-      // 2. エリア内なら、次にカメラを起動
       const isCameraReady = await startCamera();
-
       if (isCameraReady) {
-        // カメラもOKなら、最初の説明モーダルを表示
         if (permissionImage) permissionImage.classList.remove('hidden');
-        if (permissionMessage) permissionMessage.classList.add('hidden'); // メッセージは隠す
+        if (permissionMessage) permissionMessage.classList.add('hidden');
         permissionModal.style.display = 'flex';
         document.body.classList.add('modal-open');
-        
-        // OKボタンでモーダルを閉じる
         closeModalButton.onclick = () => {
           permissionModal.style.display = 'none';
           document.body.classList.remove('modal-open');
         };
-
       } else {
-        // カメラがNGなら、startCamera内で表示されたエラーメッセージのままにする
-        // OKボタンは押しても何も起きないようにする（リロードを促す）
         closeModalButton.onclick = null;
       }
-
     } else {
-      // エリア外または位置情報取得エラーなら、checkLocationAndPermission内で表示されたメッセージのまま
-      // OKボタンは押しても何も起きないようにする（リロードを促す）
       closeModalButton.onclick = null;
     }
   }
 
-  // ★ 変更：新しい初期化処理を呼び出す
   await initializeApp();
 
-  // ---- フレーム画像のロード完了を保証
   function waitImage(el) {
     return new Promise((resolve) => {
       if (!el) return resolve(null);
@@ -330,39 +285,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.all([waitImage(frameTopEl), waitImage(frameBottomEl)]);
   }
 
-  // ---- フレーム合成（表示と一致）幅100%フィット
   function drawFramesToCanvas() {
     const cw = photoCanvas.width;
     const ch = photoCanvas.height;
     const ctx = canvasContext;
-
     const drawOne = (imgEl, place) => {
       if (!imgEl) return;
       const iw = imgEl.naturalWidth;
       const ih = imgEl.naturalHeight;
       if (!iw || !ih) return;
-
       const scale = cw / iw;
       const drawW = cw;
       const drawH = Math.round(ih * scale);
       const dx = 0;
       const dy = (place === 'top') ? 0 : (ch - drawH);
-
       ctx.drawImage(imgEl, 0, 0, iw, ih, dx, dy, drawW, drawH);
     };
-
     drawOne(frameTopEl, 'top');
     drawOne(frameBottomEl, 'bottom');
   }
 
-  // ---- プレビューをモーダルに表示
   function openPreviewModalWithCanvas(canvas) {
     if (lastCaptureObjectURL) {
       URL.revokeObjectURL(lastCaptureObjectURL);
       lastCaptureObjectURL = null;
     }
     lastCaptureBlob = null;
-
     canvas.toBlob((blob) => {
       if (!blob) {
         previewImage.src = canvas.toDataURL('image/png');
@@ -376,23 +324,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 'image/png');
   }
 
-  async function closePreviewModalAndRetake() { // ★ async に変更
+  async function closePreviewModalAndRetake() {
     previewModal.classList.add('hidden');
     document.body.classList.remove('modal-open');
-
     if (lastCaptureObjectURL) {
       URL.revokeObjectURL(lastCaptureObjectURL);
       lastCaptureObjectURL = null;
     }
     lastCaptureBlob = null;
-
-    // ★ 変更：再撮影時は再度カメラを起動するだけ
     await startCamera();
   }
 
-  // =================== Fabric.js：スタンプ ===================
-
-  // ---- ダイヤル表示中の一時ロック
   function freezeTargetForDial(target){
     if (!target) return;
     target.__preLock = {
@@ -419,13 +361,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function initFabricCanvas() {
     if (fcanvas) { resizeStampCanvas(); return; }
-
     fcanvas = new fabric.Canvas(stampCanvasEl, {
       selection: true,
       preserveObjectStacking: true
     });
     resizeStampCanvas();
-
     const container = fcanvas.getElement().parentNode;
     if (container) {
       container.style.position  = 'absolute';
@@ -492,7 +432,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (actionDial) {
       const upper = fcanvas.upperCanvasEl;
-
       const showActionDial = (x, y, target) => {
         const containerRect = document.querySelector('.container').getBoundingClientRect();
         const localX = x - containerRect.left;
@@ -511,7 +450,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           lockBtn.textContent = locked ? 'ロック解除' : 'ロック';
         }
       };
-
       const hideActionDial = () => {
         if (!dialOpen) return;
         actionDial.classList.add('hidden');
@@ -521,7 +459,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         fcanvas.selection = true;
         if (lpTarget) unfreezeTargetAfterDial(lpTarget);
       };
-
       const doStampAction = (action, target) => {
         if (!target || !fcanvas) return;
         switch (action) {
@@ -554,7 +491,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         target.setCoords?.();
         fcanvas.requestRenderAll();
       };
-
       upper.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1 || isSheetOpen) { clearTimeout(lpTimer); return; }
         const target = fcanvas.findTarget(e, true) || fcanvas.getActiveObject();
@@ -569,7 +505,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           lpTimer = null;
         }, LONGPRESS_MS);
       }, { passive: true });
-
       upper.addEventListener('touchmove', (e) => {
         if (lpTimer && e.touches.length === 1 && lpStartPoint) {
           const dx = e.touches[0].clientX - lpStartPoint.x;
@@ -580,7 +515,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }
       }, { passive: true });
-
       upper.addEventListener('touchend', (e) => {
         if (lpTimer) {
           clearTimeout(lpTimer);
@@ -610,7 +544,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           lpTarget = null;
         }
       }, { passive: true });
-
       actionDial.addEventListener('click', (ev) => {
         const btn = ev.target.closest('.dial-btn');
         if (!btn || !lpTarget) return;
@@ -736,7 +669,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fcanvas) fcanvas.calcOffset();
   });
 
-  // =================== シャッター ===================
   shutterButton.addEventListener('click', async () => {
     if (!stream || !cameraFeed.srcObject) return;
     const cw = cameraFeed.clientWidth;
@@ -786,7 +718,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     openPreviewModalWithCanvas(photoCanvas);
   });
 
-  // プレビューモーダル操作
   previewSaveBtn.addEventListener('click', () => {
     const url = photoCanvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -796,6 +727,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     a.click();
     document.body.removeChild(a);
   });
+
   previewShareBtn.addEventListener('click', async () => {
     try {
       if (navigator.canShare && lastCaptureBlob) {
