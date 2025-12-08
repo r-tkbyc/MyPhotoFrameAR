@@ -386,8 +386,8 @@ body {
   /* アクティブ時は黒い枠線 */
   background: #960000;          /* 本体色はそのまま */
   color: #fff;
-  border-color: #ff0000;
-  box-shadow: 0 0 0 2px #ff0000 inset; /* ← 罫線の“太さ”はこの 2px を調整 */
+  border-color: #009940;
+  box-shadow: 0 0 0 2px #009940 inset; /* ← 罫線の“太さ”はこの 2px を調整 */
 }
 
 /* （必要なら）サムネボタンにも枠色を付けたい場合は以下を追加
@@ -398,8 +398,8 @@ body {
 */
 
 /* 3) プレビューの各ボタン色 */
-#previewSaveBtn{  background: #960000; color:#fff; }
-#previewShareBtn{ background: #416186; color:#fff; }
+#previewSaveBtn{  background: #e2649f; color:#fff; }
+#previewShareBtn{ background: #609add; color:#fff; }
 #previewCloseBtn{ background: #666666; color:#fff; }
 
 #previewSaveBtn:hover,
@@ -411,7 +411,9 @@ body {
 
 
 /* ============ 共有ボタンをCSS上で無効化（上書きで対応）25/11/12 ============ */
+/* テキストに打ち消し線を追加、ボタンを「クリックできない」ようにする
 #previewShareBtn {
-  text-decoration: line-through; /* テキストに打ち消し線を追加 */
-  pointer-events: none; /* ボタンを「クリックできない」ようにする */
+  text-decoration: line-through;
+  pointer-events: none;
 }
+*/
