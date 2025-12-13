@@ -1,122 +1,178 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | PhotoFrameWebAR</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-  </head>
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=1080 height=1920 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">PhotoFrameWebAR</div>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>WebARフォトフレーム</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="versionInfo">IM_v2.2.7</div>
+
+  <div class="container">
+    <!-- カメラ映像 -->
+    <video id="cameraFeed" autoplay playsinline></video>
+
+    <!-- 撮影結果キャンバス（最初は非表示） -->
+    <canvas id="photoCanvas" class="hidden"></canvas>
+
+    <!-- ▼ スタンプ用キャンバス（Fabric.js／カメラの上、フレームの下） -->
+    <canvas id="stampCanvas"></canvas>
+
+    <!-- シャッターボタン（画像のみ） -->
+    <button id="shutterButton" class="control-button" aria-label="シャッター">
+      <img id="shutterImage" src="./Assets/shutter_button.png" alt="シャッター" />
+    </button>
+
+    <!-- スタンプボタン（シャッターの左） -->
+    <button id="stampButton" class="control-button" aria-label="スタンプ">
+      <img src="./Assets/stamp_button.png" alt="" style="width:70%;height:70%;object-fit:contain;pointer-events:none;">
+    </button>
+
+    <!-- カメラ切り替えボタン（シャッターの右） -->
+    <button id="cameraToggleButton" class="control-button" aria-label="カメラ切り替え">
+      <img src="./Assets/change_button.png" alt="" style="width:70%;height:70%;object-fit:contain;pointer-events:none;">
+    </button>
+
+    <!-- カメラ許可メッセージ用モーダル -->
+    <div id="permissionModal" class="modal">
+      <div class="modal-content">
+        <!-- 変更ここから -->
+        <p id="permissionMessage" class="hidden"></p> <!-- hidden属性を追加してデフォルトで非表示に -->
+        <img id="permissionImage" src="./Assets/StartModal.png" alt="WebARコンテンツ説明" />
+        <!-- 変更ここまで -->
+        <button id="closeModalButton">OK</button>
       </div>
     </div>
-    <script>
 
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-      var warningBanner = document.querySelector("#unity-warning");
+    <!-- 撮影後のプレビューモーダル -->
+    <div id="previewModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="preview-wrap">
+        <button id="previewCloseX" class="preview-close" aria-label="閉じる">×</button>
+        <img id="previewImage" alt="撮影プレビュー" />
+        <div class="preview-actions">
+          <button id="previewSaveBtn" class="preview-btn primary">保存する</button>
+          <button id="previewShareBtn" class="preview-btn">&nbsp;共有する&nbsp;</button>
+          <button id="previewCloseBtn" class="preview-btn danger">閉じる</button>
+        </div>
+      </div>
+    </div>
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
+    <!-- フォトフレーム（見た目のオーバーレイ用） -->
+    <img id="frameTop" src="./Assets/FrameTop1.png" alt="">
+    <img id="frameBottom" src="./Assets/FrameBottom1.png" alt="">
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/MyPhotoFrameAR.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/MyPhotoFrameAR.data.unityweb",
-        frameworkUrl: buildUrl + "/MyPhotoFrameAR.framework.js.unityweb",
-        codeUrl: buildUrl + "/MyPhotoFrameAR.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "PhotoFrameWebAR",
-        productVersion: "0.1.0",
-        showBanner: unityShowBanner,
-      };
+    <!-- ▼ 下から出る半透明のスタンプ選択シート -->
+    <div id="stampSheet" class="stamp-sheet" aria-modal="true" role="dialog">
+      <div class="sheet-grip" aria-hidden="true"></div>
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
+      <!-- ★ 右上の × ボタンを追加 -->
+      <button id="sheetCloseX" class="sheet-close-x" aria-label="閉じる">×</button>
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
+      <!-- タブ見出し -->
+      <div class="sheet-tabs" id="stampTabs" role="tablist" aria-label="スタンプカテゴリ">
+        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-stamp1" id="tab-stamp1" data-tab="stamp1">Stamp1</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-stamp2" id="tab-stamp2" data-tab="stamp2">Stamp2</button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-stamp3" id="tab-stamp3" data-tab="stamp3">Stamp3</button>
+        <!-- 例: タブを増やす場合は↓をコピペ
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-stamp3" id="tab-stamp3" data-tab="stamp3">Stamp3</button>
+        -->
+      </div>
 
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
+      <!-- タブの中身 -->
+      <div class="sheet-body">
+        <!-- Stamp1 パネル -->
+        <div class="stamp-panel" role="tabpanel" id="panel-stamp1" aria-labelledby="tab-stamp1" data-tab="stamp1">
+          <!-- ここに Stamp1 グループのスタンプサムネイルを置く -->
+          <button class="stamp-thumb" data-src="./Assets/stamp001.png" aria-label="Stam1-01">
+            <img src="./Assets/stamp001.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp002.png" aria-label="Stam1-02">
+            <img src="./Assets/stamp002.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp003.png" aria-label="Stam1-03">
+            <img src="./Assets/stamp003.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp004.png" aria-label="Stam1-04">
+            <img src="./Assets/stamp004.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp005.png" aria-label="Stam1-05">
+            <img src="./Assets/stamp005.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp006.png" aria-label="Stam1-06">
+            <img src="./Assets/stamp006.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp007.png" aria-label="Stam1-07">
+            <img src="./Assets/stamp007.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp008.png" aria-label="Stam1-08">
+            <img src="./Assets/stamp008.png" alt="">
+          </button>
+          <!-- 必要なだけ追加 -->
+        </div>
 
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
+        <div class="stamp-panel active" role="tabpanel" id="panel-stamp2" aria-labelledby="tab-stamp2" data-tab="stamp2">
+          <!-- Stamp2 パネル -->
+          <button class="stamp-thumb" data-src="./Assets/stamp009.png" aria-label="Stamp2-01">
+            <img src="./Assets/stamp009.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp010.png" aria-label="Stamp2-02">
+            <img src="./Assets/stamp010.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp011.png" aria-label="Stamp2-03">
+            <img src="./Assets/stamp011.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp012.png" aria-label="Stamp2-04">
+            <img src="./Assets/stamp012.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp013.png" aria-label="Stamp2-05">
+            <img src="./Assets/stamp013.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp014.png" aria-label="Stamp2-06">
+            <img src="./Assets/stamp014.png" alt="">
+          </button>
+          <!-- 必要なだけ追加 -->
+        </div>
 
+        <!-- Stamp3 パネル -->
+        <div class="stamp-panel" role="tabpanel" id="panel-stamp3" aria-labelledby="tab-stamp3" data-tab="stamp3">
+          <button class="stamp-thumb" data-src="./Assets/stamp015.png" aria-label="Stamp3-01">
+            <img src="./Assets/stamp015.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp016.png" aria-label="Stamp3-02">
+            <img src="./Assets/stamp016.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp017.png" aria-label="Stamp3-03">
+            <img src="./Assets/stamp017.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp018.png" aria-label="Stamp3-04">
+            <img src="./Assets/stamp018.png" alt="">
+          </button>
+          <button class="stamp-thumb" data-src="./Assets/stamp019.png" aria-label="Stamp3-05">
+            <img src="./Assets/stamp019.png" alt="">
+          </button>
+          <!-- 必要なだけ追加 -->
+        </div>
 
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        <!-- 例: パネルを増やす場合は↓をコピペして data-tab / id / aria を揃える
+        <div class="stamp-panel" role="tabpanel" id="panel-stamp3" aria-labelledby="tab-stamp3" data-tab="stamp3">
+          <button class="stamp-thumb" data-src="./Assets/stamps/stamp3_01.png"><img src="./Assets/stamps/stamp3_01.png" alt=""></button>
+        </div>
+        -->
+      </div>
+    </div>
 
-        canvas.style.width = "1080px";
-        canvas.style.height = "1920px";
-      }
+    <!-- ▼ スタンプ長押し用：フリックアクションダイヤル -->
+    <div id="stampActionDial" class="hidden" aria-hidden="true">
+      <button data-action="delete"      class="dial-btn dial-right">削除</button>
+      <button data-action="front"       class="dial-btn dial-up">前面へ</button>
+      <button data-action="back"        class="dial-btn dial-down">背面へ</button>
+      <button data-action="lock-toggle" class="dial-btn dial-left">ロック</button>
+    </div>
+  </div>
 
-      loadingBar.style.display = "block";
-
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                loadingBar.style.display = "none";
-                fullscreenButton.onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
-      document.body.appendChild(script);
-
-    </script>
-  </body>
+  <!-- Fabric.js（すでに読み込み済みでなければ） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="script.js"></script>
+</body>
 </html>
