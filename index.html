@@ -69,7 +69,7 @@
 
     <!-- 画面左上：バージョン＆カメラ状態（HTML側） -->
     <div id="overlay">
-      <div id="verLabel">Ver 1.0.0</div>
+      <div id="verLabel"></div>
       <button id="startCamBtn">Start Camera</button>
       <div id="camInfo">cam: -</div>
     </div>
@@ -92,7 +92,7 @@
 
     <script>
       // ====== ここを変えるだけで「更新反映チェック」できます ======
-      const APP_VERSION = "1.0.3";
+      const APP_VERSION = "1.0.5";
       document.getElementById("verLabel").textContent = "Ver " + APP_VERSION;
 
       // ====== カメラ起動（ユーザー操作ボタンで開始） ======
