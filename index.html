@@ -69,7 +69,7 @@
 
     <!-- 画面左上：バージョン＆カメラ状態（HTML側） -->
     <div id="overlay">
-      <div id="verLabel">Ver 1.0.1</div>
+      <div id="verLabel">Ver 1.0.2</div>
       <button id="startCamBtn">Start Camera</button>
       <div id="camInfo">cam: -</div>
     </div>
@@ -117,6 +117,7 @@
 
           const stream = await navigator.mediaDevices.getUserMedia(constraints);
           video.srcObject = stream;
+          await video.play().catch(()=>{});
 
           const track = stream.getVideoTracks()[0];
           const s = track.getSettings ? track.getSettings() : {};
@@ -168,7 +169,7 @@
 
       // UnityのWebGLコンテキスト属性はテンプレ側で上書きできる（例：preserveDrawingBuffer等）
       // ここでは透明合成に向けて alpha を有効化
-      config['webglContextAttributes'] = { alpha: true }; // :contentReference[oaicite:2]{index=2}
+      config['webglContextAttributes'] = { alpha: true, premultipliedAlpha: false }; // :contentReference[oaicite:2]{index=2}
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
@@ -191,6 +192,8 @@
           progressBarFull.style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
+          canvas.style.background = "transparent";
+          container.style.background = "transparent";
           fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
         }).catch((message) => {
           alert(message);
