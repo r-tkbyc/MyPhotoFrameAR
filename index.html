@@ -38,7 +38,7 @@
       <!-- p style="text-align: center; width:min(60vw, 60vh);">This augmented reality experience requires access to your device's camera</p -->
       <!-- button id="startARButton" onclick="StartAR()" style="visibility: hidden">ALLOW ACCESS</button -->
       <p style="text-align: center; width:min(80vw, 60vh);">WebARを体験いただくには、<br>カメラ、位置情報（GPS）を<br>許可してください。</p>
-      <button id="startARButton" onclick="StartAR()" style="visibility: hidden">Let's START!</button>
+      <button id="startARButton" onclick="CheckLocationAndStartAR()" style="visibility: hidden">Let's START!</button>
       <div id="spinner" 
         style="position: absolute; left: 50%; bottom: 40%; transform: translateX(-50%);
               border: 5px solid rgba(255,255,255,0.2); border-top: 5px solid white;
@@ -85,6 +85,80 @@
     <script src="arcamera.js" type="text/javascript"></script>
     <script src="itracker.js" type="text/javascript"></script>
     <script>
+      // =========================================================
+      // ★★★ GPSエリア制限設定 (GPS Area Settings) ★★★
+      // =========================================================
+      
+      // 1. GPS制限機能を使うかどうか (true: 使う / false: 使わない)
+      const IS_GPS_LIMIT_ENABLED = false; // ★ここをtrueにすると機能がONになります
+      // 2. 許可するエリアの中心座標 (Googleマップなどで取得)
+      // 例: 東京駅 (35.681236, 139.767125)
+      const ALLOWED_LATITUDE = 35.57250255470917;
+      const ALLOWED_LONGITUDE = 139.74831086386783;
+      // 3. 許可する半径 (メートル)
+      const ALLOWED_RADIUS_METERS = 10;
+      // =========================================================
+      // 2点間の距離を計算する関数 (Haversine formula)
+      function getDistanceInMeters(lat1, lng1, lat2, lng2) {
+        const R = 6371e3; // 地球の半径 (m)
+        const toRad = (deg) => deg * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+      // スタートボタンが押されたときに呼ばれる判定関数
+      function CheckLocationAndStartAR() {
+        // 機能OFFなら位置情報を取らずに即スタート
+        if (!IS_GPS_LIMIT_ENABLED) {
+          StartAR();
+          return;
+        }
+        if (!navigator.geolocation) {
+          alert("お使いのブラウザは位置情報に対応していません。");
+          return; // GPS非対応なら進めない（または通すかは運用次第）
+        }
+        // 位置情報の取得開始
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            
+            // 距離計算
+            const distance = getDistanceInMeters(userLat, userLng, ALLOWED_LATITUDE, ALLOWED_LONGITUDE);
+            console.log("User Location:", userLat, userLng);
+            console.log("Distance to target:", distance + "m");
+            if (distance <= ALLOWED_RADIUS_METERS) {
+              // エリア内ならAR開始
+              StartAR();
+            } else {
+              // エリア外ならアラート表示（Unityロードはしない）
+              alert("現在地は指定エリア外です。\nARを体験するには会場へお越しください。\n(距離: " + Math.round(distance) + "m)");
+            }
+          },
+          (error) => {
+            console.error("GPS Error:", error);
+            let errorMsg = "位置情報の取得中にエラーが発生しました。";
+            switch(error.code) {
+              case error.PERMISSION_DENIED:
+                errorMsg = "位置情報の利用が許可されていません。\nブラウザの設定で許可してください。";
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMsg = "位置情報を取得できませんでした。";
+                break;
+              case error.TIMEOUT:
+                errorMsg = "位置情報の取得がタイムアウトしました。";
+                break;
+            }
+            alert(errorMsg);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+      // =========================================================
       // Disable double-tap to zoom
       document.addEventListener('touchstart', function (event) {
         if (event.touches.length > 1) {
@@ -280,8 +354,7 @@
                   else{
                       //back and front
                       camDevices.push(mediaDevice);
-                  }   
-                  
+                  }
                   ctr++;
               }
           });
@@ -377,7 +450,7 @@
           confirmUrlDiv.style.opacity = 1;
           confirmUrlDiv.style.display = "";
           window.newUrlString = url;
-          document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url + "?";                
+          document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url + "?";
       }
       function HideConfirmUrl(){
           var confirmUrlDiv = document.getElementById("confirmUrlDiv");
