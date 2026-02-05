@@ -1,9 +1,9 @@
 const cacheName = "DefaultCompany-PhotoFrameWebAR-0.1.0";
 const contentToCache = [
-    "Build/toGitHub.loader.js",
-    "Build/toGitHub.framework.js.unityweb",
-    "Build/toGitHub.data.unityweb",
-    "Build/toGitHub.wasm.unityweb",
+    "Build/Build.loader.js",
+    "Build/Build.framework.js.unityweb",
+    "Build/Build.data.unityweb",
+    "Build/Build.wasm.unityweb",
     "TemplateData/style.css"
 
 ];
